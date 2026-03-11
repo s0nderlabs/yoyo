@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ─── */
+
+@theme {
+  --color-cream: #FFFEF2;
+  --color-cream-dark: #F5F5F0;
+  --color-ink: #191918;
+  --color-ink-light: #8A8A8A;
+  --color-sage: #8FAE82;
+  --color-sage-light: #A3C296;
+  --color-fail: #A85C4F;
+  --color-border: #E5E4DC;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+}
+
+@theme inline {
+  --font-display: var(--font-instrument-serif), Georgia, serif;
+  --font-body: var(--font-source-serif-4), Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), "Fira Code", monospace;
+}
+
+/* ─── Base ─── */
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Selection ─── */
+
+::selection {
+  background-color: var(--color-sage);
+  color: var(--color-cream);
+}
+
+/* ─── Noise Grain Overlay ─── */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-image: url("/noise.svg");
+  background-size: 200px 200px;
+  opacity: 0.03;
+  mix-blend-mode: multiply;
+}
+
+/* ─── Scrollbar ─── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-light);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* ─── Utilities ─── */
+
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-light);
+}
