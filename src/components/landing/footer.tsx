@@ -1,14 +1,10 @@
 "use client";
 
-import { useLogin } from "@privy-io/react-auth";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useHandleLogin } from "@/hooks/use-handle-login";
 
 export function Footer() {
-  const router = useRouter();
-  const { login } = useLogin({
-    onComplete: () => router.push("/app"),
-  });
+  const handleLogin = useHandleLogin();
 
   return (
     <footer className="border-t border-border px-6 py-24 sm:py-32">
@@ -23,7 +19,7 @@ export function Footer() {
             Start saving today.
           </p>
           <button
-            onClick={() => login()}
+            onClick={handleLogin}
             className="mt-8 inline-flex items-center rounded-lg bg-sage px-8 py-3.5 font-mono text-sm font-medium tracking-wide text-cream transition-colors duration-300 hover:bg-sage-light"
           >
             Get Started

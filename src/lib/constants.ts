@@ -17,3 +17,14 @@ export const VAULTS = {
 
 export const DEFAULT_CHAIN_ID = 8453;
 export const SUPPORTED_CHAIN_IDS = [8453, 1, 42161] as const;
+
+export const VAULT_DISPLAY_ORDER = ["yoUSD", "yoETH", "yoBTC", "yoEUR"] as const;
+
+export const VAULT_FRIENDLY_NAMES: Record<string, string> = {
+  yoUSD: "Dollar Savings",
+  yoETH: "Ether Savings",
+  yoBTC: "Bitcoin Savings",
+  yoEUR: "Euro Savings",
+  yoGOLD: "Gold Savings",
+  yoUSDT: "Tether Savings",
+};

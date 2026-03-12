@@ -57,38 +57,59 @@ body::before {
   mix-blend-mode: multiply;
 }
 
-/* ─── Scrollbar ─── */
+/* ─── Scrollbar (hidden globally) ─── */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-ink-light);
+  display: none;
 }
 
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: none;
 }
 
 /* ─── Utilities ─── */
 
 @utility label-mono {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--color-ink-light);
+}
+
+/* ─── Range Slider ─── */
+
+.slider-sage {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  outline: none;
+}
+
+.slider-sage::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-sage);
+  cursor: pointer;
+  border: 2px solid var(--color-cream);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.slider-sage::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-sage);
+  cursor: pointer;
+  border: 2px solid var(--color-cream);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.slider-sage:disabled {
+  opacity: 0.4;
 }

@@ -1,14 +1,10 @@
 "use client";
 
-import { useLogin } from "@privy-io/react-auth";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useHandleLogin } from "@/hooks/use-handle-login";
 
 export function HeroSection() {
-  const router = useRouter();
-  const { login } = useLogin({
-    onComplete: () => router.push("/app"),
-  });
+  const handleLogin = useHandleLogin();
 
   return (
     <section className="relative flex min-h-dvh flex-col items-center justify-center px-6">
@@ -59,7 +55,7 @@ export function HeroSection() {
           className="mt-10"
         >
           <button
-            onClick={() => login()}
+            onClick={handleLogin}
             className="inline-flex items-center rounded-lg bg-sage px-8 py-3.5 font-mono text-sm font-medium tracking-wide text-cream transition-colors duration-300 hover:bg-sage-light"
           >
             Get Started

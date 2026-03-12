@@ -1,168 +1,31 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
-import { motion } from "framer-motion";
-import { useState, useRef } from "react";
-
-function OverviewScreen() {
-  const { user } = usePrivy();
-  const name = user?.google?.name?.split(" ")[0] ||
-    user?.apple?.firstName ||
-    "there";
-
-  return (
-    <div className="flex min-h-[calc(100dvh-5rem)] flex-col justify-center px-6 sm:px-10">
-      <div className="mx-auto w-full max-w-lg">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <p className="font-display text-4xl leading-snug text-ink sm:text-5xl">
-            Hey {name},
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.8,
-            delay: 0.15,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          className="mt-8"
-        >
-          <p className="font-body text-xl leading-relaxed text-ink-light">
-            You haven&apos;t started saving yet. Tell me what you&apos;re saving
-            for and I&apos;ll help you get started.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.8,
-            delay: 0.3,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          className="mt-10 flex flex-wrap gap-2"
-        >
-          {["Emergency fund", "Vacation", "Just earning"].map((goal) => (
-            <button
-              key={goal}
-              className="rounded-lg border border-border bg-cream-dark/50 px-4 py-2 font-mono text-xs tracking-wide text-ink-light transition-all duration-300 hover:border-sage/40 hover:text-ink"
-            >
-              {goal}
-            </button>
-          ))}
-        </motion.div>
-      </div>
-    </div>
-  );
-}
-
-function DetailsScreen() {
-  return (
-    <div className="min-h-[calc(100dvh-5rem)] px-6 pt-16 pb-8 sm:px-10">
-      <div className="mx-auto w-full max-w-lg space-y-10">
-        {/* YOUR ACCOUNTS */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <span className="label-mono">Your accounts</span>
-          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border">
-            <div className="bg-cream p-4">
-              <span className="label-mono text-[10px]">Balance</span>
-              <p className="mt-1 font-display text-2xl text-ink">$0</p>
-            </div>
-            <div className="bg-cream p-4">
-              <span className="label-mono text-[10px]">Savings</span>
-              <p className="mt-1 font-display text-2xl text-ink">$0</p>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* SAVINGS */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.6,
-            delay: 0.1,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-        >
-          <span className="label-mono">Savings</span>
-          <div className="mt-4 rounded-lg border border-border p-5">
-            <p className="font-body text-sm text-ink-light">
-              No savings goals yet. Start a conversation below to set one up.
-            </p>
-          </div>
-        </motion.section>
-
-        {/* YIELDS */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.6,
-            delay: 0.2,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-        >
-          <span className="label-mono">Yields available</span>
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[
-              { name: "yoUSD", asset: "USDC", apy: "5.1%", color: "text-sage" },
-              { name: "yoETH", asset: "WETH", apy: "3.2%", color: "text-sage" },
-              { name: "yoBTC", asset: "cbBTC", apy: "1.0%", color: "text-sage" },
-              { name: "yoEUR", asset: "EURC", apy: "12.3%", color: "text-sage" },
-            ].map((vault) => (
-              <button
-                key={vault.name}
-                className="flex-none rounded-lg border border-border p-4 transition-all duration-300 hover:border-sage/40 hover:shadow-[0_2px_12px_rgba(143,174,130,0.08)]"
-                style={{ minWidth: "140px" }}
-              >
-                <span className="label-mono text-[10px]">{vault.name}</span>
-                <p className={`mt-2 font-display text-2xl ${vault.color}`}>
-                  {vault.apy}
-                </p>
-                <p className="mt-1 font-mono text-[10px] text-ink-light">
-                  {vault.asset}
-                </p>
-              </button>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* RECENT ACTIVITY */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.6,
-            delay: 0.3,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-        >
-          <span className="label-mono">Recent activity</span>
-          <div className="mt-4 rounded-lg border border-border p-5">
-            <p className="font-body text-sm text-ink-light">
-              No activity yet. Your transactions will appear here.
-            </p>
-          </div>
-        </motion.section>
-      </div>
-    </div>
-  );
-}
+import { useState, useRef, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
+import type { VaultStatsItem } from "@yo-protocol/core";
+import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useChatSheet } from "@/contexts/chat-context";
+import { OverviewScreen } from "@/components/dashboard/overview-screen";
+import { DetailsScreen } from "@/components/dashboard/details-screen";
+import { SettingsSidebar } from "@/components/dashboard/settings-sidebar";
+import { DepositSheet } from "@/components/dashboard/deposit-sheet";
+import { WithdrawSheet } from "@/components/dashboard/withdraw-sheet";
 
 export default function DashboardPage() {
+  const data = useDashboardData();
+  const { registerDashboardData } = useChatSheet();
+
+  // Register dashboard data ref for chat context
+  useEffect(() => {
+    registerDashboardData(data);
+  }, [data, registerDashboardData]);
+
   const [activeScreen, setActiveScreen] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [depositVault, setDepositVault] = useState<VaultStatsItem | null>(null);
+  const [withdrawVault, setWithdrawVault] = useState<VaultStatsItem | null>(
+    null,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleScroll = () => {
@@ -172,12 +35,36 @@ export default function DashboardPage() {
     setActiveScreen(scrollLeft > width * 0.5 ? 1 : 0);
   };
 
+  const handleDepositSuccess = () => {
+    setDepositVault(null);
+    data.refetchPositions();
+    data.refetchBalances();
+  };
+
+  const handleWithdrawSuccess = () => {
+    setWithdrawVault(null);
+    data.refetchPositions();
+    data.refetchBalances();
+  };
+
+  const withdrawPosition = withdrawVault
+    ? data.positions.find((p) => p.vault.id === withdrawVault.id)
+    : undefined;
+
   return (
     <div className="relative">
+      <SettingsSidebar
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        walletBalanceUsd={data.walletBalanceUsd}
+      />
+
       {/* Header chrome */}
       <div className="fixed top-0 right-0 left-0 z-30 flex items-center justify-between px-5 pt-[max(env(safe-area-inset-top),12px)] pb-2">
-        {/* Gear icon */}
-        <button className="rounded-full p-2 transition-colors duration-200 hover:bg-ink/[0.04]">
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="rounded-full p-2 transition-colors duration-200 hover:bg-ink/[0.04]"
+        >
           <svg
             width="20"
             height="20"
@@ -198,7 +85,6 @@ export default function DashboardPage() {
           </svg>
         </button>
 
-        {/* Dot indicators */}
         <div className="flex gap-1.5">
           <div
             className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
@@ -220,12 +106,42 @@ export default function DashboardPage() {
         className="flex snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div className="w-full flex-none snap-center">
-          <OverviewScreen />
+          <OverviewScreen data={data} />
         </div>
         <div className="w-full flex-none snap-center">
-          <DetailsScreen />
+          <DetailsScreen
+            data={data}
+            onVaultTap={setDepositVault}
+            onPositionTap={setWithdrawVault}
+          />
         </div>
       </div>
+
+      {/* Sheets with exit animations */}
+      <AnimatePresence>
+        {depositVault && (
+          <DepositSheet
+            key="deposit"
+            vault={depositVault}
+            prices={data.prices}
+            onClose={() => setDepositVault(null)}
+            onSuccess={handleDepositSuccess}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {withdrawVault && withdrawPosition && (
+          <WithdrawSheet
+            key="withdraw"
+            vault={withdrawVault}
+            position={withdrawPosition.position}
+            prices={data.prices}
+            onClose={() => setWithdrawVault(null)}
+            onSuccess={handleWithdrawSuccess}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

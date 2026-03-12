@@ -2,7 +2,7 @@ import type { PrivyClientConfig } from "@privy-io/react-auth";
 import { base, mainnet, arbitrum } from "viem/chains";
 
 export const privyConfig: PrivyClientConfig = {
-  loginMethods: ["email", "google", "apple"],
+  loginMethods: ["email", "google", "passkey"],
   appearance: {
     theme: "light",
     accentColor: "#8FAE82",
@@ -10,7 +10,9 @@ export const privyConfig: PrivyClientConfig = {
     walletList: ["metamask", "coinbase_wallet", "rainbow", "wallet_connect"],
   },
   embeddedWallets: {
-    createOnLogin: "users-without-wallets",
+    ethereum: {
+      createOnLogin: "users-without-wallets",
+    },
     showWalletUIs: false,
   },
   defaultChain: base,
