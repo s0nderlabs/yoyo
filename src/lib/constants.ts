@@ -28,3 +28,32 @@ export const VAULT_FRIENDLY_NAMES: Record<string, string> = {
   yoGOLD: "Gold Savings",
   yoUSDT: "Tether Savings",
 };
+
+export const BASE_TOKENS: Record<string, `0x${string}`> = {
+  USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  WETH: "0x4200000000000000000000000000000000000006",
+  ETH: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+  cbBTC: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+  EURC: "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
+};
+
+export const BASE_TOKEN_DECIMALS: Record<string, number> = {
+  USDC: 6,
+  WETH: 18,
+  ETH: 18,
+  cbBTC: 8,
+  EURC: 6,
+};
+
+export const ALLOWANCE_HOLDER =
+  "0x0000000000001fF3684f28c67538d4D072C22734" as const;
+
+export const SYMBOL_TO_COINGECKO: Record<string, string> = {
+  usdc: "usd-coin",
+  weth: "ethereum",
+  eth: "ethereum",
+  cbbtc: "coinbase-wrapped-btc",
+  eurc: "euro-coin",
+  xaut: "tether-gold",
+  usdt: "tether",
+};

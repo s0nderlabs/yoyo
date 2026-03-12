@@ -65,7 +65,7 @@ function ChatInputBar() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(env(safe-area-inset-bottom),20px)] pt-3">
-      <div className="mx-auto max-w-lg">
+      <div className="mx-auto max-w-lg lg:max-w-3xl">
         <button
           onClick={() => open()}
           className="flex w-full items-center gap-3 rounded-2xl border border-border/80 bg-cream/90 px-4 py-3 shadow-[0_4px_24px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-colors duration-300 hover:border-sage/30"

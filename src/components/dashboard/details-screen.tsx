@@ -6,16 +6,21 @@ import type { DashboardData } from "@/hooks/use-dashboard-data";
 import { formatUsd } from "@/lib/format";
 import { VaultCard } from "./vault-card";
 import { PositionCard } from "./position-card";
+import { ActivityList, type ActivityItem } from "./activity-list";
 import { SkeletonText, SkeletonCard, SkeletonRow } from "./skeleton";
 
 interface DetailsScreenProps {
   data: DashboardData;
+  activities?: ActivityItem[];
+  goals?: Record<string, { name: string; targetUsd: number }>;
   onVaultTap: (vault: VaultStatsItem) => void;
   onPositionTap: (vault: VaultStatsItem) => void;
 }
 
 export function DetailsScreen({
   data,
+  activities,
+  goals,
   onVaultTap,
   onPositionTap,
 }: DetailsScreenProps) {
@@ -81,6 +86,7 @@ export function DetailsScreen({
                   vault={p.vault}
                   position={p.position}
                   prices={data.prices}
+                  goal={goals?.[p.vault.id]}
                   onTap={onPositionTap}
                 />
               ))
@@ -136,10 +142,8 @@ export function DetailsScreen({
           }}
         >
           <span className="label-mono">Recent Activity</span>
-          <div className="mt-4 rounded-lg border border-border p-5">
-            <p className="font-body text-sm text-ink-light">
-              No activity yet. Your transactions will appear here.
-            </p>
+          <div className="mt-4">
+            <ActivityList activities={activities ?? []} />
           </div>
         </motion.section>
       </div>

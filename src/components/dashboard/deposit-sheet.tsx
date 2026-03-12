@@ -6,12 +6,13 @@ import { parseUnits } from "viem";
 import type { Address } from "viem";
 import type { VaultStatsItem } from "@yo-protocol/core";
 import {
-  useDeposit,
   useTokenBalance,
   usePreviewDeposit,
 } from "@yo-protocol/react";
 import { usePrivy } from "@privy-io/react-auth";
-import { formatUsd, formatApy, formatShares } from "@/lib/format";
+import { useVaultDeposit } from "@/hooks/use-vault-tx";
+import { formatUsd, formatApy, formatShares, getPrice } from "@/lib/format";
+import { logActivity } from "@/lib/activity";
 import { VAULT_FRIENDLY_NAMES } from "@/lib/constants";
 
 interface DepositSheetProps {
@@ -23,10 +24,7 @@ interface DepositSheetProps {
 
 const STEP_LABELS: Record<string, string> = {
   idle: "Save",
-  "switching-chain": "Switching chain...",
-  approving: "Approving...",
-  depositing: "Saving...",
-  waiting: "Confirming...",
+  processing: "Saving...",
   success: "Saved!",
   error: "Try again",
 };
@@ -68,13 +66,22 @@ export function DepositSheet({
     { enabled: parsedAmount > 0n },
   );
 
-  const { deposit, step, isLoading, isSuccess, hash, reset } = useDeposit({
+  const { deposit, step, isLoading, isSuccess, hash, reset } = useVaultDeposit({
     vault: vaultAddress,
-    onConfirmed: () => onSuccess(),
+    onConfirmed: (txHash) => {
+      logActivity({
+        type: "deposit",
+        amount: amount.toString(),
+        tokenSymbol: vault.asset.symbol,
+        vaultId: vault.id,
+        txHash,
+      });
+      onSuccess();
+    },
     onError: () => {},
   });
 
-  const price = prices[vault.asset.symbol.toLowerCase()] || 0;
+  const price = getPrice(prices, vault.asset.symbol) || 0;
   const usdValue = amount * price;
   const exceedsBalance = amount > tokenBalance;
   const canDeposit =

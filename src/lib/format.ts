@@ -1,3 +1,5 @@
+import { SYMBOL_TO_COINGECKO } from "./constants";
+
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -39,6 +41,29 @@ export function formatShares(shares: bigint, decimals: number): string {
   if (num === 0) return "0";
   if (num < 0.0001) return "< 0.0001";
   return num.toLocaleString("en-US", { maximumFractionDigits: 4 });
+}
+
+export function getPrice(
+  prices: Record<string, number>,
+  symbol: string,
+): number | undefined {
+  const key = symbol.toLowerCase();
+  return prices[SYMBOL_TO_COINGECKO[key] ?? key];
+}
+
+export function formatRelativeTime(date: Date | string | number): string {
+  const now = Date.now();
+  const then = typeof date === "number" ? date : new Date(date).getTime();
+  const seconds = Math.floor((now - then) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
 }
 
 export function assetsToUsd(

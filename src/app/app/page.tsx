@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { VaultStatsItem } from "@yo-protocol/core";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useActivities } from "@/hooks/use-activities";
+import { useGoals } from "@/hooks/use-goals";
 import { useChatSheet } from "@/contexts/chat-context";
 import { OverviewScreen } from "@/components/dashboard/overview-screen";
 import { DetailsScreen } from "@/components/dashboard/details-screen";
+import { BroadsheetLayout } from "@/components/dashboard/broadsheet-layout";
 import { SettingsSidebar } from "@/components/dashboard/settings-sidebar";
 import { DepositSheet } from "@/components/dashboard/deposit-sheet";
 import { WithdrawSheet } from "@/components/dashboard/withdraw-sheet";
 
 export default function DashboardPage() {
   const data = useDashboardData();
+  const { activities } = useActivities();
+  const { goals } = useGoals();
   const { registerDashboardData } = useChatSheet();
 
   // Register dashboard data ref for chat context
@@ -46,6 +51,30 @@ export default function DashboardPage() {
     data.refetchPositions();
     data.refetchBalances();
   };
+
+  const mappedActivities = useMemo(
+    () =>
+      activities.map((a) => ({
+        type: a.type as "deposit" | "withdraw" | "swap",
+        amount: a.amount,
+        tokenSymbol: a.tokenSymbol,
+        vaultId: a.vaultId ?? undefined,
+        txHash: a.txHash ?? undefined,
+        createdAt: a.createdAt,
+      })),
+    [activities],
+  );
+
+  const goalsMap = useMemo(
+    () =>
+      Object.fromEntries(
+        goals.map((g) => [
+          g.vaultId,
+          { name: g.name, targetUsd: parseFloat(g.targetAmount) },
+        ]),
+      ),
+    [goals],
+  );
 
   const withdrawPosition = withdrawVault
     ? data.positions.find((p) => p.vault.id === withdrawVault.id)
@@ -85,7 +114,7 @@ export default function DashboardPage() {
           </svg>
         </button>
 
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 lg:hidden">
           <div
             className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
               activeScreen === 0 ? "bg-ink" : "bg-border"
@@ -99,23 +128,37 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Swipeable screens */}
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <div className="w-full flex-none snap-center">
-          <OverviewScreen data={data} />
-        </div>
-        <div className="w-full flex-none snap-center">
-          <DetailsScreen
-            data={data}
-            onVaultTap={setDepositVault}
-            onPositionTap={setWithdrawVault}
-          />
+      {/* Mobile: snap-scroll between screens */}
+      <div className="lg:hidden">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="w-full flex-none snap-center">
+            <OverviewScreen data={data} />
+          </div>
+          <div className="w-full flex-none snap-center">
+            <DetailsScreen
+              data={data}
+              activities={mappedActivities}
+              goals={goalsMap}
+              onVaultTap={setDepositVault}
+              onPositionTap={setWithdrawVault}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Desktop: newspaper broadsheet */}
+      <BroadsheetLayout
+        className="hidden lg:block"
+        data={data}
+        activities={mappedActivities}
+        goals={goalsMap}
+        onVaultTap={setDepositVault}
+        onPositionTap={setWithdrawVault}
+      />
 
       {/* Sheets with exit animations */}
       <AnimatePresence>

@@ -1,9 +1,14 @@
+import { formatUsd } from "@/lib/format";
+
 interface UserContext {
   userName?: string;
   walletAddress?: string;
   walletBalanceUsd?: number;
   totalSavingsUsd?: number;
   hasPositions?: boolean;
+  hasHistory?: boolean;
+  goals?: Array<{ vaultId: string; name: string; targetAmount: string; currency: string }>;
+  conversationRecap?: string;
 }
 
 export function buildSystemPrompt(ctx: UserContext): string {
@@ -24,20 +29,49 @@ export function buildSystemPrompt(ctx: UserContext): string {
     `- If the user asks about something outside savings, politely redirect`,
     `- When suggesting a deposit, pick the best matching account based on what the user says`,
     ``,
+    `## Goals`,
+    `- Users can set savings goals — help them track progress`,
+    `- Use create_goal when a user tells you what they're saving for`,
+    `- Use get_goals to check progress before making suggestions`,
+    `- Frame goals naturally: "your vacation fund" not "your yoUSD goal"`,
+    `- When a user says they're saving for something specific, proactively create a goal`,
+    ``,
+    `## Currency conversion`,
+    `- Users can convert between currencies (like forex in a bank): use the swap tool`,
+    `- If the user wants to save in a currency they don't hold, you can swap and deposit in one step: use swap_and_deposit`,
+    `- Always call get_swap_quote first to check the rate, then present it naturally`,
+    `- Never call swap or swap_and_deposit without showing the rate first`,
+    `- Supported: USDC, ETH, WETH, cbBTC, EURC`,
+    `- Keep it simple: "I can convert your USDC to ETH — you'd get about 0.002 ETH at the current rate"`,
+    ``,
     `## User context`,
   ];
 
   if (ctx.userName) {
-    // Strip anything that could be used for prompt injection
     const safeName = ctx.userName.replace(/[^\p{L}\p{N}\s'-]/gu, "").slice(0, 50);
     if (safeName) lines.push(`- Name: ${safeName}`);
   }
   lines.push(ctx.walletAddress ? `- Wallet: connected` : `- Wallet: not connected`);
   if (ctx.walletBalanceUsd !== undefined)
-    lines.push(`- Wallet balance: $${ctx.walletBalanceUsd.toFixed(2)}`);
+    lines.push(`- Wallet balance: ${formatUsd(ctx.walletBalanceUsd)}`);
   if (ctx.totalSavingsUsd !== undefined)
-    lines.push(`- Total savings: $${ctx.totalSavingsUsd.toFixed(2)}`);
+    lines.push(`- Total savings: ${formatUsd(ctx.totalSavingsUsd)}`);
   lines.push(ctx.hasPositions ? `- Has active savings` : `- No savings yet`);
+
+  if (ctx.hasHistory === false) {
+    lines.push(`- First conversation — greet warmly and ask what they're saving for`);
+  }
+
+  if (ctx.goals && ctx.goals.length > 0) {
+    lines.push(`- Active goals:`);
+    for (const g of ctx.goals) {
+      lines.push(`  - ${g.name}: ${g.targetAmount} ${g.currency} in ${g.vaultId}`);
+    }
+  }
+
+  if (ctx.conversationRecap) {
+    lines.push(``, `## Earlier conversation`, ctx.conversationRecap);
+  }
 
   return lines.join("\n");
 }

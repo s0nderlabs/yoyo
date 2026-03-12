@@ -5,12 +5,13 @@ import { motion } from "framer-motion";
 import type { Address } from "viem";
 import type { VaultStatsItem, UserVaultPosition } from "@yo-protocol/core";
 import {
-  useRedeem,
   usePreviewRedeem,
   useShareBalance,
 } from "@yo-protocol/react";
 import { usePrivy } from "@privy-io/react-auth";
-import { formatUsd, formatShares, assetsToUsd } from "@/lib/format";
+import { useVaultRedeem } from "@/hooks/use-vault-tx";
+import { formatUsd, formatShares, assetsToUsd, getPrice } from "@/lib/format";
+import { logActivity } from "@/lib/activity";
 import { VAULT_FRIENDLY_NAMES } from "@/lib/constants";
 
 interface WithdrawSheetProps {
@@ -23,9 +24,7 @@ interface WithdrawSheetProps {
 
 const STEP_LABELS: Record<string, string> = {
   idle: "Withdraw",
-  approving: "Approving...",
-  redeeming: "Withdrawing...",
-  waiting: "Confirming...",
+  processing: "Withdrawing...",
   success: "Done!",
   error: "Try again",
 };
@@ -59,13 +58,22 @@ export function WithdrawSheet({
   );
 
   const { redeem, step, isLoading, isSuccess, hash, instant, reset } =
-    useRedeem({
+    useVaultRedeem({
       vault: vaultAddress,
-      onConfirmed: () => onSuccess(),
+      onConfirmed: (txHash) => {
+        logActivity({
+          type: "withdraw",
+          amount: withdrawAmount.toString(),
+          tokenSymbol: vault.asset.symbol,
+          vaultId: vault.id,
+          txHash,
+        });
+        onSuccess();
+      },
       onError: () => {},
     });
 
-  const price = prices[vault.asset.symbol.toLowerCase()] || 0;
+  const price = getPrice(prices, vault.asset.symbol) || 0;
   const positionUsd = assetsToUsd(
     position.assets,
     vault.asset.decimals,

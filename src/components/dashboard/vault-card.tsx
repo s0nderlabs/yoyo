@@ -19,8 +19,7 @@ export function VaultCard({ vault, onTap }: VaultCardProps) {
   return (
     <button
       onClick={() => onTap(vault)}
-      className="flex-none rounded-lg border border-border p-4 text-left transition-all duration-300 hover:border-sage/40 hover:shadow-[0_2px_12px_rgba(143,174,130,0.08)]"
-      style={{ minWidth: "140px" }}
+      className="min-w-[140px] flex-none rounded-lg border border-border p-4 text-left transition-all duration-300 hover:border-sage/40 hover:shadow-[0_2px_12px_rgba(143,174,130,0.08)] lg:min-w-0"
     >
       <span className="label-mono text-[10px]">{name}</span>
       <p className="mt-2 font-display text-2xl text-sage">{apy}</p>

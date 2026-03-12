@@ -62,17 +62,63 @@ AI is a feature that enables simplicity, not the product itself. YO Savings Hack
 
 ```
 src/
-├── app/              # Next.js App Router pages
-│   ├── globals.css   # Tailwind v4 theme + design system
-│   ├── layout.tsx    # Root layout (fonts, metadata, providers)
-│   ├── page.tsx      # Landing page
-│   └── app/          # Authenticated area
-│       ├── layout.tsx # Auth guard + app chrome (chat bar)
-│       └── page.tsx   # Dashboard (swipe screens)
-├── components/       # React components
-├── providers/        # Provider stack (Privy → Query → wagmi → YO)
-└── lib/              # Utilities, config, constants
+├── app/
+│   ├── globals.css        # Tailwind v4 theme + design system
+│   ├── layout.tsx         # Root layout (fonts, metadata, providers)
+│   ├── page.tsx           # Landing page
+│   ├── sw.ts              # Service worker (PWA)
+│   ├── ~offline/page.tsx  # Offline fallback
+│   ├── api/
+│   │   └── chat/route.ts  # AI chat endpoint (DeepSeek + Vercel AI SDK)
+│   └── app/               # Authenticated area
+│       ├── layout.tsx     # Auth guard + app chrome (chat bar, ChatProvider)
+│       └── page.tsx       # Dashboard (swipeable overview + details screens)
+├── components/
+│   ├── chat/              # AI chat UI
+│   │   ├── chat-sheet.tsx          # Bottom sheet with useChat
+│   │   ├── message-bubble.tsx      # User/assistant message rendering
+│   │   ├── thinking-indicator.tsx  # Reasoning/loading animation
+│   │   ├── tool-approval-card.tsx  # Confirm/reject card for deposit/withdraw
+│   │   └── tool-result-card.tsx    # Rendered results for read-only tools
+│   ├── dashboard/         # Dashboard screens + sheets
+│   │   ├── overview-screen.tsx     # Total savings, greeting, chip buttons
+│   │   ├── details-screen.tsx      # Vault list + positions
+│   │   ├── vault-card.tsx          # Individual vault display
+│   │   ├── position-card.tsx       # User position display
+│   │   ├── deposit-sheet.tsx       # Deposit bottom sheet (useDeposit)
+│   │   ├── withdraw-sheet.tsx      # Withdraw bottom sheet (useRedeem)
+│   │   ├── settings-sidebar.tsx    # Settings slide-out panel
+│   │   └── skeleton.tsx            # Loading skeletons
+│   └── landing/           # Landing page sections
+├── contexts/
+│   └── chat-context.tsx   # Bridge between chat and dashboard state
+├── hooks/
+│   ├── use-dashboard-data.ts  # Aggregates vaults, positions, balances, prices
+│   └── use-handle-login.ts    # Privy login handler
+├── lib/
+│   ├── ai/
+│   │   ├── system-prompt.ts   # AI persona + context builder
+│   │   └── tools.ts           # Tool definitions (server + client-side)
+│   ├── db/
+│   │   ├── index.ts           # Drizzle client (Vercel Postgres)
+│   │   └── schema.ts          # Chat/message tables
+│   ├── constants.ts       # Vault names, chain config
+│   ├── format.ts          # formatUsd, formatApy helpers
+│   ├── privy.ts           # Privy app config
+│   └── wagmi.ts           # wagmi chain + transport config
+└── providers/
+    └── index.tsx          # Provider stack (Privy → Query → wagmi → YO)
 ```
+
+## AI Chat Architecture
+
+- **Model:** DeepSeek V3.2 Reasoner (`deepseek-reasoner`) via Vercel AI SDK
+- **Auth:** `@privy-io/server-auth` verifies `privy-token` cookie in API route
+- **Read-only tools** (server `execute`): `get_vault_rates`, `get_user_positions`, `get_wallet_balance`
+- **Action tools** (client-side, no `execute`): `deposit`, `withdraw` — render confirm/reject card, execute via `useDeposit`/`useRedeem` hooks
+- **Context bridge:** `ChatContext` connects chat sheet to dashboard data (vaults, positions, balances, refetch callbacks)
+- **Transport:** `DefaultChatTransport` with live body getters for fresh wallet/balance data per request
+- **System prompt injection defense:** userName sanitized with `replace(/[^\p{L}\p{N}\s'-]/gu, "").slice(0, 50)`
 
 ## Provider Nesting (CRITICAL)
 

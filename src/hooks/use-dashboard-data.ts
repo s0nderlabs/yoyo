@@ -11,7 +11,7 @@ import {
 import type { VaultStatsItem, UserVaultPosition } from "@yo-protocol/core";
 import type { Address } from "viem";
 import { DEFAULT_CHAIN_ID, VAULT_DISPLAY_ORDER } from "@/lib/constants";
-import { assetsToUsd } from "@/lib/format";
+import { assetsToUsd, getPrice } from "@/lib/format";
 
 export interface TypedPosition {
   vault: VaultStatsItem;
@@ -75,8 +75,7 @@ export function useDashboardData(): DashboardData {
 
   const totalSavingsUsd = useMemo(() => {
     return positions.reduce((sum, p) => {
-      const symbol = p.vault.asset.symbol.toLowerCase();
-      const price = prices[symbol];
+      const price = getPrice(prices, p.vault.asset.symbol);
       return sum + assetsToUsd(p.position.assets, p.vault.asset.decimals, price);
     }, 0);
   }, [positions, prices]);
@@ -85,21 +84,37 @@ export function useDashboardData(): DashboardData {
     ? parseFloat(balances.totalBalanceUsd)
     : 0;
 
-  return {
-    baseVaults,
-    allVaults: vaults,
-    vaultsLoading,
+  return useMemo(
+    () => ({
+      baseVaults,
+      allVaults: vaults,
+      vaultsLoading,
 
-    walletAddress,
-    walletBalanceUsd,
-    totalSavingsUsd,
-    positions,
-    hasPositions: positions.length > 0,
-    userLoading: positionsLoading || balancesLoading,
+      walletAddress,
+      walletBalanceUsd,
+      totalSavingsUsd,
+      positions,
+      hasPositions: positions.length > 0,
+      userLoading: positionsLoading || balancesLoading,
 
-    prices,
+      prices,
 
-    refetchPositions,
-    refetchBalances,
-  };
+      refetchPositions,
+      refetchBalances,
+    }),
+    [
+      baseVaults,
+      vaults,
+      vaultsLoading,
+      walletAddress,
+      walletBalanceUsd,
+      totalSavingsUsd,
+      positions,
+      positionsLoading,
+      balancesLoading,
+      prices,
+      refetchPositions,
+      refetchBalances,
+    ],
+  );
 }

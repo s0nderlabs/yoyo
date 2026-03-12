@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePrivy, useLogout } from "@privy-io/react-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,39 @@ interface SettingsSidebarProps {
   open: boolean;
   onClose: () => void;
   walletBalanceUsd?: number;
+}
+
+function CopyableWallet({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  const truncated = `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div>
+      <span className="label-mono text-[10px]">Wallet</span>
+      <button
+        onClick={copy}
+        className="mt-1 flex items-center gap-1.5 rounded-md px-0 py-0 font-mono text-sm text-ink transition-colors duration-200 hover:text-ink-light"
+      >
+        <span>{truncated}</span>
+        {copied ? (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-sage">
+            <path d="M3 7.5l2.5 2.5L11 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-ink-light">
+            <rect x="5" y="5" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M9 5V3.5A1.5 1.5 0 007.5 2h-4A1.5 1.5 0 002 3.5v4A1.5 1.5 0 003.5 9H5" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
 }
 
 export function SettingsSidebar({
@@ -29,6 +63,9 @@ export function SettingsSidebar({
 
   const walletAddress = user?.smartWallet?.address ?? user?.wallet?.address;
   const email = user?.email?.address || user?.google?.email;
+  const displayName =
+    user?.google?.name || (user?.apple as { name?: string } | undefined)?.name || email || "User";
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <AnimatePresence>
@@ -52,7 +89,16 @@ export function SettingsSidebar({
           >
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between">
-                <span className="font-display text-xl text-ink">Settings</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sage/10">
+                    <span className="font-display text-sm text-sage">
+                      {initial}
+                    </span>
+                  </div>
+                  <span className="font-display text-lg text-ink">
+                    {displayName.split(" ")[0]}
+                  </span>
+                </div>
                 <button
                   onClick={onClose}
                   className="rounded-full p-1.5 transition-colors duration-200 hover:bg-ink/[0.04]"
@@ -74,23 +120,25 @@ export function SettingsSidebar({
                 </button>
               </div>
 
-              <div className="mt-8 space-y-4">
-                {email && (
-                  <div>
-                    <span className="label-mono text-[10px]">Account</span>
-                    <p className="mt-1 font-body text-sm text-ink">{email}</p>
-                  </div>
-                )}
+              {email && (
+                <p className="mt-1.5 pl-12 font-mono text-[10px] text-ink-light">
+                  {email}
+                </p>
+              )}
+
+              <div className="mt-6 h-px bg-border/60" />
+
+              <div className="mt-5 space-y-4">
                 {walletAddress && (
-                  <div>
-                    <span className="label-mono text-[10px]">Wallet</span>
-                    <p className="mt-1 font-mono text-xs text-ink-light">
-                      {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                    </p>
+                  <div className="rounded-lg bg-cream-dark/30 p-3">
+                    <CopyableWallet address={walletAddress} />
                   </div>
                 )}
+
+                <div className="h-px bg-border/60" />
+
                 {walletBalanceUsd !== undefined && (
-                  <div>
+                  <div className="rounded-lg bg-cream-dark/30 p-3">
                     <span className="label-mono text-[10px]">Balance</span>
                     <p className="mt-1 font-display text-lg text-ink">
                       {formatUsd(walletBalanceUsd)}
