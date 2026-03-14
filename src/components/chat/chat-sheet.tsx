@@ -1,106 +1,33 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import type { UIMessage } from "ai";
 import { usePrivy } from "@privy-io/react-auth";
 import { useChatSheet } from "@/contexts/chat-context";
-import { useChatPersistence } from "@/hooks/use-chat-persistence";
 import { MessageBubble } from "./message-bubble";
 import { ThinkingIndicator } from "./thinking-indicator";
 import { ToolApprovalCard } from "./tool-approval-card";
 import { ToolResultCard } from "./tool-result-card";
 
-export function ChatSheet() {
-  const { initialMessages, isLoaded, hasHistory, saveNewMessages } =
-    useChatPersistence();
-
-  if (!isLoaded) {
-    return <ChatSheetSkeleton />;
-  }
-
-  return (
-    <ChatSheetInner
-      initialMessages={initialMessages}
-      hasHistory={hasHistory}
-      saveNewMessages={saveNewMessages}
-    />
-  );
+interface ChatSheetProps {
+  visible: boolean;
 }
 
-function ChatSheetSkeleton() {
-  const { close } = useChatSheet();
-
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-ink/10"
-        onClick={close}
-      />
-      <motion.div
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[85dvh] max-w-lg flex-col rounded-t-2xl border-t border-border bg-cream lg:max-w-xl"
-      >
-        <div className="flex-none px-5 pt-3 pb-2">
-          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-          <div className="flex items-center justify-between">
-            <span className="font-display text-lg text-ink">yoyo</span>
-            <button
-              onClick={close}
-              className="rounded-full p-1.5 transition-colors duration-200 hover:bg-ink/[0.04]"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="text-ink-light"
-              >
-                <path
-                  d="M4 4l8 8M12 4l-8 8"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          <div className="space-y-3 px-5">
-            <div className="h-8 w-48 animate-pulse rounded-lg bg-cream-dark" />
-            <div className="h-8 w-36 animate-pulse rounded-lg bg-cream-dark" />
-          </div>
-        </div>
-      </motion.div>
-    </>
-  );
-}
-
-interface ChatSheetInnerProps {
-  initialMessages: UIMessage[];
-  hasHistory: boolean;
-  saveNewMessages: (messages: UIMessage[]) => void;
-}
-
-function ChatSheetInner({
-  initialMessages,
-  hasHistory,
-  saveNewMessages,
-}: ChatSheetInnerProps) {
-  const { close, prefill, clearPrefill, dashboardData } = useChatSheet();
+export function ChatSheet({ visible }: ChatSheetProps) {
+  const {
+    close,
+    prefill,
+    clearPrefill,
+    dashboardData,
+    registerSendMessage,
+    setIsStreaming: setCtxStreaming,
+    setChatInput,
+  } = useChatSheet();
   const { user } = usePrivy();
-  const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [showSpacer, setShowSpacer] = useState(false);
+  const scrollLockRef = useRef(false);
 
   const name =
     user?.google?.name?.split(" ")[0] ||
@@ -116,12 +43,17 @@ function ChatSheetInner({
     totalSavingsUsd: dashboardData?.totalSavingsUsd,
     userName: name,
     hasPositions: dashboardData?.hasPositions,
-    hasHistory,
   };
 
   const transport = useMemo(() => {
     const liveBody: Record<string, unknown> = {};
-    for (const key of Object.keys(bodyRef.current)) {
+    for (const key of [
+      "walletAddress",
+      "walletBalanceUsd",
+      "totalSavingsUsd",
+      "userName",
+      "hasPositions",
+    ]) {
       Object.defineProperty(liveBody, key, {
         get: () => bodyRef.current[key],
         enumerable: true,
@@ -130,101 +62,133 @@ function ChatSheetInner({
     return new DefaultChatTransport({ api: "/api/chat", body: liveBody });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fix 7: No welcome message — start empty
   const { messages, sendMessage, addToolResult, status } = useChat({
     transport,
-    messages: initialMessages,
   });
 
+  const isBusy = status === "submitted" || status === "streaming";
   const isStreaming = status === "streaming";
-  const prevStatusRef = useRef(status);
 
-  // Persist messages after each AI response completes
   useEffect(() => {
-    if (prevStatusRef.current === "streaming" && status === "ready") {
-      saveNewMessages(messages);
-    }
-    prevStatusRef.current = status;
-  }, [status, messages, saveNewMessages]);
+    setCtxStreaming(isBusy);
+  }, [isBusy, setCtxStreaming]);
 
-  // Handle prefill
+  // Register send for external input bar
+  const handleSend = useCallback(
+    (text: string) => {
+      if (!text.trim() || isBusy) return;
+      setShowSpacer(true);
+      scrollLockRef.current = true;
+      sendMessage({ text });
+    },
+    [isBusy, sendMessage],
+  );
+
+  // Fix 2: Remove spacer + unlock after streaming completes (or on error)
+  const prevStatusRef = useRef(status);
+  useEffect(() => {
+    const wasActive = prevStatusRef.current === "streaming" || prevStatusRef.current === "submitted";
+
+    if (wasActive && status === "ready") {
+      scrollLockRef.current = false;
+
+      // Scroll to end of actual content FIRST, then remove spacer
+      const el = scrollRef.current;
+      if (el) {
+        const allMsgs = el.querySelectorAll("[data-role]");
+        const lastMsg = allMsgs[allMsgs.length - 1] as HTMLElement | undefined;
+        if (lastMsg) {
+          const bottom = lastMsg.offsetTop + lastMsg.offsetHeight;
+          const target = Math.max(0, bottom - el.clientHeight + 40);
+          el.scrollTo({ top: target, behavior: "smooth" });
+        }
+        // Remove spacer AFTER scroll animation finishes
+        setTimeout(() => setShowSpacer(false), 350);
+      } else {
+        setShowSpacer(false);
+      }
+    }
+
+    // On error, clean up immediately
+    if (wasActive && status === "error") {
+      scrollLockRef.current = false;
+      setShowSpacer(false);
+    }
+
+    prevStatusRef.current = status;
+  }, [status]);
+
+  useEffect(() => {
+    registerSendMessage(handleSend);
+  }, [handleSend, registerSendMessage]);
+
   useEffect(() => {
     if (prefill) {
-      setInput(prefill);
+      setChatInput(prefill);
       clearPrefill();
-      setTimeout(() => inputRef.current?.focus(), 400);
     }
-  }, [prefill, clearPrefill]);
+  }, [prefill, clearPrefill, setChatInput]);
 
-  // Auto-scroll on new messages
+  // Scroll behavior
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!scrollRef.current || !visible) return;
+
+    if (scrollLockRef.current) {
+      // Fix 6: Smooth scroll user message to top
+      requestAnimationFrame(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const userMsgs = el.querySelectorAll("[data-role='user']");
+        const last = userMsgs[userMsgs.length - 1] as HTMLElement | undefined;
+        if (last) {
+          const containerRect = el.getBoundingClientRect();
+          const msgRect = last.getBoundingClientRect();
+          const newTop = el.scrollTop + (msgRect.top - containerRect.top);
+          el.scrollTo({ top: newTop, behavior: "smooth" });
+        }
+      });
+    } else {
+      // Fix 1: Only auto-scroll if user is near bottom (don't override manual scroll)
+      const el = scrollRef.current;
+      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      if (isNearBottom) {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      }
     }
-  }, [messages]);
-
-  // Focus input when mounted
-  useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 400);
-  }, []);
-
-  const handleSend = () => {
-    const text = input.trim();
-    if (!text || isStreaming) return;
-    sendMessage({ text });
-    setInput("");
-  };
+  }, [messages, visible]);
 
   return (
     <>
       {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-ink/10"
-        onClick={close}
-      />
+      {visible && (
+        <div
+          className="fixed inset-0 z-40 bg-ink/10 transition-opacity duration-300"
+          onClick={close}
+        />
+      )}
 
-      {/* Sheet */}
-      <motion.div
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto flex h-[85dvh] max-w-lg flex-col rounded-t-2xl border-t border-border bg-cream lg:max-w-xl"
+      {/* Panel */}
+      <div
+        className={`fixed inset-x-0 bottom-0 z-40 mx-auto flex h-[85dvh] max-w-lg flex-col rounded-t-2xl border-t border-border bg-cream transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-xl ${
+          visible ? "translate-y-0" : "translate-y-full"
+        }`}
       >
-        {/* Drag handle + header */}
+        {/* Fix 5: Centered yoyo logo, tappable to close */}
         <div className="flex-none px-5 pt-3 pb-2">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-          <div className="flex items-center justify-between">
-            <span className="font-display text-lg text-ink">yoyo</span>
+          <div className="flex justify-center">
             <button
               onClick={close}
-              className="rounded-full p-1.5 transition-colors duration-200 hover:bg-ink/[0.04]"
+              className="font-display text-lg text-ink transition-opacity hover:opacity-60"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="text-ink-light"
-              >
-                <path
-                  d="M4 4l8 8M12 4l-8 8"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
+              yoyo
             </button>
           </div>
         </div>
 
         {/* Messages */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-5 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pt-4 pb-20">
           <div className="space-y-4">
             {messages.map((message) => {
               const hasText = message.parts.some(
@@ -232,22 +196,15 @@ function ChatSheetInner({
               );
 
               return (
-                <div key={message.id}>
+                <div key={message.id} data-role={message.role}>
                   {message.parts.map((part, i) => {
                     if (part.type === "text") {
                       return (
-                        <MessageBubble
-                          key={i}
-                          role={message.role}
-                          text={part.text}
-                        />
+                        <MessageBubble key={i} role={message.role} text={part.text} />
                       );
                     }
                     if (part.type === "reasoning") return null;
-                    if (
-                      part.type.startsWith("tool-") &&
-                      "toolCallId" in part
-                    ) {
+                    if (part.type.startsWith("tool-") && "toolCallId" in part) {
                       const tp = part as {
                         type: string;
                         toolCallId: string;
@@ -257,20 +214,13 @@ function ChatSheetInner({
                       };
                       const toolName = tp.type.slice(5);
 
-                      if (
-                        toolName === "deposit" ||
-                        toolName === "withdraw" ||
-                        toolName === "swap_and_deposit" ||
-                        toolName === "swap"
-                      ) {
+                      if (["deposit", "withdraw", "swap_and_deposit", "swap"].includes(toolName)) {
                         return (
                           <ToolApprovalCard
                             key={tp.toolCallId}
-                            toolName={toolName}
+                            toolName={toolName as "deposit" | "withdraw" | "swap" | "swap_and_deposit"}
                             toolCallId={tp.toolCallId}
-                            args={
-                              (tp.input as Record<string, string>) || {}
-                            }
+                            args={(tp.input as Record<string, string>) || {}}
                             state={tp.state}
                             result={tp.output}
                             addToolResult={addToolResult}
@@ -281,11 +231,7 @@ function ChatSheetInner({
 
                       if (tp.state === "result" && tp.output) {
                         return (
-                          <ToolResultCard
-                            key={tp.toolCallId}
-                            toolName={toolName}
-                            result={tp.output}
-                          />
+                          <ToolResultCard key={tp.toolCallId} toolName={toolName} result={tp.output} />
                         );
                       }
 
@@ -293,56 +239,23 @@ function ChatSheetInner({
                     }
                     return null;
                   })}
-                  {message.role === "assistant" && !hasText && isStreaming && (
+                  {message.role === "assistant" && !hasText && isBusy && (
                     <ThinkingIndicator />
                   )}
                 </div>
               );
             })}
+            {/* Thinking indicator for submitted phase (before assistant message exists) */}
+            {status === "submitted" && (
+              <div data-role="assistant">
+                <ThinkingIndicator />
+              </div>
+            )}
+            {/* Spacer — only during send+stream, removed after */}
+            {showSpacer && <div style={{ minHeight: "70vh" }} aria-hidden="true" />}
           </div>
         </div>
-
-        {/* Input */}
-        <div className="flex-none border-t border-border/60 px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex items-center gap-3"
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything..."
-              className="flex-1 bg-transparent font-body text-sm text-ink outline-none placeholder:text-ink-light/40"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isStreaming}
-              className="rounded-full p-2 transition-colors duration-200 hover:bg-ink/[0.04] disabled:opacity-30"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="text-sage"
-              >
-                <path
-                  d="M3 8h10M9 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </form>
-        </div>
-      </motion.div>
+      </div>
     </>
   );
 }

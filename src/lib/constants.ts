@@ -68,6 +68,20 @@ export const VAULT_LOGOS: Record<string, string> = {
   yoUSDT: "/tokens/usdt.png",
 };
 
+/** Token logos keyed by token symbol */
+export const TOKEN_LOGOS: Record<string, string> = {
+  WETH: "/tokens/eth.png", ETH: "/tokens/eth.png",
+  USDC: "/tokens/usdc.png", USDT: "/tokens/usdt.png",
+  cbBTC: "/tokens/btc.png", EURC: "/tokens/eur.png",
+};
+
+/** Friendly display names for token symbols */
+export const TOKEN_DISPLAY_NAMES: Record<string, string> = {
+  WETH: "ETH", cbBTC: "BTC", EURC: "EUR",
+};
+
+export const NARRATION_CACHE_KEY = "yoyo:narration-cache";
+
 export const SYMBOL_TO_COINGECKO: Record<string, string> = {
   usdc: "usd-coin",
   weth: "ethereum",

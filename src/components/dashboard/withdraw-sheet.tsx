@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import type { Address } from "viem";
 import type { VaultStatsItem, UserVaultPosition } from "@yo-protocol/core";
@@ -13,6 +13,7 @@ import { useVaultRedeem } from "@/hooks/use-vault-tx";
 import { formatUsd, formatShares, assetsToUsd, getPrice } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
 import { VAULT_FRIENDLY_NAMES } from "@/lib/constants";
+import { useChatSheet } from "@/contexts/chat-context";
 
 interface WithdrawSheetProps {
   vault: VaultStatsItem;
@@ -21,13 +22,6 @@ interface WithdrawSheetProps {
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const STEP_LABELS: Record<string, string> = {
-  idle: "Withdraw",
-  processing: "Withdrawing...",
-  success: "Done!",
-  error: "Try again",
-};
 
 export function WithdrawSheet({
   vault,
@@ -87,10 +81,29 @@ export function WithdrawSheet({
     : (sliderValue / 100) * (Number(position.assets) / 10 ** vault.asset.decimals);
   const canRedeem = redeemShares > 0n && !isLoading && step === "idle";
 
-  const handleRedeem = async () => {
+  const handleRedeem = useCallback(async () => {
     if (!canRedeem) return;
     await redeem(redeemShares);
-  };
+  }, [canRedeem, redeem, redeemShares]);
+
+  // Sync step to chat bar context — use refs to avoid infinite loop
+  const { setActiveSheet } = useChatSheet();
+  const handleRedeemRef = useRef(handleRedeem);
+  const resetRef = useRef(reset);
+  const onCloseRef = useRef(onClose);
+  handleRedeemRef.current = handleRedeem;
+  resetRef.current = reset;
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    setActiveSheet({
+      type: "withdraw",
+      onConfirm: () => (step === "error" ? resetRef.current() : handleRedeemRef.current()),
+      onCancel: () => onCloseRef.current(),
+      step,
+    });
+    return () => setActiveSheet(null);
+  }, [step, setActiveSheet]);
 
   const name = VAULT_FRIENDLY_NAMES[vault.id] || vault.name;
 
@@ -116,7 +129,7 @@ export function WithdrawSheet({
         onDragEnd={(_, info) => {
           if (info.offset.y > 100 || info.velocity.y > 500) onClose();
         }}
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-2xl border-t border-border bg-cream px-6 pb-[max(env(safe-area-inset-bottom),24px)] pt-4"
+        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-2xl border-t border-border bg-cream px-6 pb-[calc(max(env(safe-area-inset-bottom),24px)+72px)] pt-4"
       >
         {/* Drag handle */}
         <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-border" />
@@ -226,20 +239,7 @@ export function WithdrawSheet({
               </div>
             </div>
 
-            {/* Confirm */}
-            <button
-              onClick={step === "error" ? reset : handleRedeem}
-              disabled={step === "error" ? false : !canRedeem}
-              className={`mt-6 w-full rounded-lg px-8 py-3.5 font-mono text-sm font-medium tracking-wide transition-colors duration-300 ${
-                step === "error"
-                  ? "bg-fail text-cream hover:bg-fail/90"
-                  : canRedeem || isLoading
-                    ? "bg-sage text-cream hover:bg-sage-light"
-                    : "bg-border text-ink-light"
-              }`}
-            >
-              {STEP_LABELS[step] || "Withdraw"}
-            </button>
+            {/* Confirm button moved to morphing chat bar */}
           </>
         )}
       </motion.div>

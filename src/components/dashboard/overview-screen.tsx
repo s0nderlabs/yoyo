@@ -7,7 +7,7 @@ import type { VaultStatsItem } from "@yo-protocol/core";
 import type { DashboardData } from "@/hooks/use-dashboard-data";
 import { useChatSheet } from "@/contexts/chat-context";
 import { formatUsd, formatApy } from "@/lib/format";
-import { VAULT_LOGOS, VAULT_FRIENDLY_NAMES } from "@/lib/constants";
+import { VAULT_LOGOS, VAULT_FRIENDLY_NAMES, TOKEN_LOGOS, NARRATION_CACHE_KEY } from "@/lib/constants";
 import { OdometerNumber } from "@/components/ui/odometer-number";
 import { PositionCard } from "./position-card";
 import { VaultCard } from "./vault-card";
@@ -203,7 +203,7 @@ export function OverviewScreen({
   const [narration, setNarration] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     try {
-      return localStorage.getItem("yoyo:narration-cache");
+      return localStorage.getItem(NARRATION_CACHE_KEY);
     } catch { return null; }
   });
   const [narrationLoading, setNarrationLoading] = useState(false);
@@ -249,9 +249,9 @@ export function OverviewScreen({
     : [...new Set(data.positions.map((p) => p.vault.id))];
 
   // Fetch AI narration when activities exist
-  const hasActivities = (activities?.length ?? 0) > 0;
+  const activityCount = activities?.length ?? 0;
   useEffect(() => {
-    if (!hasActivities) return;
+    if (activityCount === 0) return;
     const controller = new AbortController();
     setNarrationLoading(true);
     fetch("/api/activity/narrate", { signal: controller.signal })
@@ -262,12 +262,12 @@ export function OverviewScreen({
       .then((d) => {
         const text = d.narration ?? null;
         setNarration(text);
-        if (text) try { localStorage.setItem("yoyo:narration-cache", text); } catch {}
+        if (text) try { localStorage.setItem(NARRATION_CACHE_KEY, text); } catch {}
       })
       .catch((e) => { if (e.name !== "AbortError") setNarration(null); })
       .finally(() => setNarrationLoading(false));
     return () => controller.abort();
-  }, [hasActivities]);
+  }, [activityCount]);
 
   const name =
     user?.google?.name?.split(" ")[0] ||
@@ -471,8 +471,27 @@ export function OverviewScreen({
                         format={formatUsd}
                         className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
                       />
-                      <div className="flex items-center justify-end">
-                        <WalletIcon className="h-8 w-8 text-ink/15" />
+                      <div className="flex items-end justify-between">
+                        {data.walletAssets.length > 0 ? (
+                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            {data.walletAssets.slice(0, 4).map((a) => {
+                              const logo = TOKEN_LOGOS[a.symbol];
+                              return (
+                                <span key={a.symbol} className="flex items-center gap-1.5">
+                                  {logo && (
+                                    <img src={logo} alt="" width={14} height={14} className="h-3.5 w-3.5 rounded-full" />
+                                  )}
+                                  <span className="font-body text-[11px] text-ink-light/60">
+                                    {parseFloat(a.balance).toLocaleString("en-US", { maximumFractionDigits: 4 })} {a.symbol}
+                                  </span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div />
+                        )}
+                        <WalletIcon className="h-6 w-6 flex-none text-ink/10" />
                       </div>
                     </div>
                   </div>
@@ -575,7 +594,7 @@ export function OverviewScreen({
         )}
 
         {/* ── Activity ───────────────────────────────────── */}
-        {((activities && activities.length > 0) || narration) && (
+        {(activityCount > 0 || narration) && (
           <div className="px-6 sm:px-10">
             <div className="mx-auto w-full max-w-lg">
               <motion.section {...sectionReveal(2)} className="mt-10">

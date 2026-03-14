@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { VaultStatsItem } from "@yo-protocol/core";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { NARRATION_CACHE_KEY } from "@/lib/constants";
 import { useActivities } from "@/hooks/use-activities";
 import { useGoals } from "@/hooks/use-goals";
 import { useChatSheet } from "@/contexts/chat-context";
@@ -24,17 +25,19 @@ export default function DashboardPage() {
   const [depositVault, setDepositVault] = useState<VaultStatsItem | null>(null);
   const [withdrawVault, setWithdrawVault] = useState<VaultStatsItem | null>(null);
 
-  const handleDepositSuccess = () => {
-    setDepositVault(null);
-    data.refetchPositions();
-    data.refetchBalances();
+  const handleTransactionSuccess = (clearSheet: () => void) => {
+    clearSheet();
+    try { localStorage.removeItem(NARRATION_CACHE_KEY); } catch {}
+    // Delay refetches to let on-chain state settle
+    setTimeout(() => refetchActivities(), 1500);
+    setTimeout(() => {
+      data.refetchPositions();
+      data.refetchBalances();
+    }, 4000);
   };
 
-  const handleWithdrawSuccess = () => {
-    setWithdrawVault(null);
-    data.refetchPositions();
-    data.refetchBalances();
-  };
+  const handleDepositSuccess = () => handleTransactionSuccess(() => setDepositVault(null));
+  const handleWithdrawSuccess = () => handleTransactionSuccess(() => setWithdrawVault(null));
 
   const mappedActivities = useMemo(
     () =>

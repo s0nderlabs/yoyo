@@ -25,6 +25,12 @@ export interface DashboardCache {
   timestamp: number;
 }
 
+export interface WalletAsset {
+  symbol: string;
+  balance: string;
+  balanceUsd: string;
+}
+
 export interface DashboardData {
   baseVaults: VaultStatsItem[];
   allVaults: VaultStatsItem[];
@@ -32,6 +38,7 @@ export interface DashboardData {
 
   walletAddress: Address | undefined;
   walletBalanceUsd: number;
+  walletAssets: WalletAsset[];
   totalSavingsUsd: number;
   positions: TypedPosition[];
   hasPositions: boolean;
@@ -107,6 +114,17 @@ export function useDashboardData(): DashboardData {
     ? parseFloat(balances.totalBalanceUsd)
     : 0;
 
+  const walletAssets = useMemo(() => {
+    const raw = (balances as any)?.assets || [];
+    return raw
+      .filter((a: any) => a.balanceUsd && parseFloat(a.balanceUsd) > 0.01)
+      .map((a: any) => ({
+        symbol: a.symbol as string,
+        balance: a.balance as string,
+        balanceUsd: a.balanceUsd as string,
+      }));
+  }, [balances]);
+
   const userLoading = positionsLoading || balancesLoading;
 
   // Write to cache when fresh data arrives
@@ -136,6 +154,7 @@ export function useDashboardData(): DashboardData {
 
       walletAddress,
       walletBalanceUsd,
+      walletAssets,
       totalSavingsUsd,
       positions,
       hasPositions: positions.length > 0,
@@ -154,6 +173,7 @@ export function useDashboardData(): DashboardData {
       vaultsLoading,
       walletAddress,
       walletBalanceUsd,
+      walletAssets,
       totalSavingsUsd,
       positions,
       userLoading,

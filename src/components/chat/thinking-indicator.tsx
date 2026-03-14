@@ -55,7 +55,7 @@ export function ThinkingIndicator() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 5 }}
           transition={{ duration: 0.3 }}
-          className="font-mono text-xs text-sage"
+          className="font-body text-xs text-sage"
         >
           {YOYO_PHRASES[phraseIndex]}...
         </motion.span>

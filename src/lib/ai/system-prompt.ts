@@ -6,7 +6,6 @@ interface UserContext {
   walletBalanceUsd?: number;
   totalSavingsUsd?: number;
   hasPositions?: boolean;
-  hasHistory?: boolean;
   goals?: Array<{ vaultId: string; name: string; targetAmount: string; currency: string }>;
   conversationRecap?: string;
 }
@@ -57,10 +56,6 @@ export function buildSystemPrompt(ctx: UserContext): string {
   if (ctx.totalSavingsUsd !== undefined)
     lines.push(`- Total savings: ${formatUsd(ctx.totalSavingsUsd)}`);
   lines.push(ctx.hasPositions ? `- Has active savings` : `- No savings yet`);
-
-  if (ctx.hasHistory === false) {
-    lines.push(`- First conversation — greet warmly and ask what they're saving for`);
-  }
 
   if (ctx.goals && ctx.goals.length > 0) {
     lines.push(`- Active goals:`);

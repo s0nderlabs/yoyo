@@ -28,7 +28,6 @@ export async function POST(req: Request) {
     totalSavingsUsd,
     userName,
     hasPositions,
-    hasHistory,
   } = body as {
     messages: UIMessage[];
     walletAddress?: string;
@@ -36,7 +35,6 @@ export async function POST(req: Request) {
     totalSavingsUsd?: number;
     userName?: string;
     hasPositions?: boolean;
-    hasHistory?: boolean;
   };
 
   const tools = createTools(walletAddress, userId);
@@ -51,7 +49,6 @@ export async function POST(req: Request) {
       walletBalanceUsd,
       totalSavingsUsd,
       hasPositions,
-      hasHistory,
       conversationRecap: recap || undefined,
     }),
     messages: await convertToModelMessages(windowed),

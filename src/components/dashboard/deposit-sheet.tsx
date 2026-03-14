@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { parseUnits } from "viem";
 import type { Address } from "viem";
@@ -14,6 +14,7 @@ import { useVaultDeposit } from "@/hooks/use-vault-tx";
 import { formatUsd, formatApy, formatShares, getPrice } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
 import { VAULT_FRIENDLY_NAMES } from "@/lib/constants";
+import { useChatSheet } from "@/contexts/chat-context";
 
 interface DepositSheetProps {
   vault: VaultStatsItem;
@@ -21,13 +22,6 @@ interface DepositSheetProps {
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const STEP_LABELS: Record<string, string> = {
-  idle: "Save",
-  processing: "Saving...",
-  success: "Saved!",
-  error: "Try again",
-};
 
 export function DepositSheet({
   vault,
@@ -87,14 +81,33 @@ export function DepositSheet({
   const canDeposit =
     parsedAmount > 0n && !exceedsBalance && !isLoading && step === "idle";
 
-  const handleDeposit = async () => {
+  const handleDeposit = useCallback(async () => {
     if (!canDeposit) return;
     await deposit({
       token: tokenAddress,
       amount: parsedAmount,
       chainId: vault.chain.id,
     });
-  };
+  }, [canDeposit, deposit, tokenAddress, parsedAmount, vault.chain.id]);
+
+  // Sync step to chat bar context — use refs to avoid infinite loop
+  const { setActiveSheet } = useChatSheet();
+  const handleDepositRef = useRef(handleDeposit);
+  const resetRef = useRef(reset);
+  const onCloseRef = useRef(onClose);
+  handleDepositRef.current = handleDeposit;
+  resetRef.current = reset;
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    setActiveSheet({
+      type: "deposit",
+      onConfirm: () => (step === "error" ? resetRef.current() : handleDepositRef.current()),
+      onCancel: () => onCloseRef.current(),
+      step,
+    });
+    return () => setActiveSheet(null);
+  }, [step, setActiveSheet]);
 
   const handleAmountTap = useCallback(() => {
     setIsEditing(true);
@@ -134,7 +147,7 @@ export function DepositSheet({
         onDragEnd={(_, info) => {
           if (info.offset.y > 100 || info.velocity.y > 500) onClose();
         }}
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-2xl border-t border-border bg-cream px-6 pb-[max(env(safe-area-inset-bottom),24px)] pt-4"
+        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-2xl border-t border-border bg-cream px-6 pb-[calc(max(env(safe-area-inset-bottom),24px)+72px)] pt-4"
       >
         {/* Drag handle */}
         <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-border" />
@@ -284,20 +297,7 @@ export function DepositSheet({
               </div>
             )}
 
-            {/* Confirm */}
-            <button
-              onClick={step === "error" ? reset : handleDeposit}
-              disabled={step === "error" ? false : !canDeposit}
-              className={`mt-6 w-full rounded-lg px-8 py-3.5 font-mono text-sm font-medium tracking-wide transition-colors duration-300 ${
-                step === "error"
-                  ? "bg-fail text-cream hover:bg-fail/90"
-                  : canDeposit || isLoading
-                    ? "bg-sage text-cream hover:bg-sage-light"
-                    : "bg-border text-ink-light"
-              }`}
-            >
-              {STEP_LABELS[step] || "Save"}
-            </button>
+            {/* Confirm button moved to morphing chat bar */}
           </>
         )}
       </motion.div>

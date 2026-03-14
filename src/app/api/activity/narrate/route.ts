@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm";
 import { verifyAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
+import { VAULT_FRIENDLY_NAMES, TOKEN_DISPLAY_NAMES } from "@/lib/constants";
 
 export async function GET() {
   let userId: string;
@@ -28,11 +29,11 @@ export async function GET() {
     }
 
     const data = rows.map((r) => ({
-      type: r.type,
+      action: r.type,
       amount: r.amount,
-      token: r.tokenSymbol,
-      vault: r.vaultId,
-      when: r.createdAt.toISOString(),
+      asset: TOKEN_DISPLAY_NAMES[r.tokenSymbol] || r.tokenSymbol,
+      savingsAccount: r.vaultId ? (VAULT_FRIENDLY_NAMES[r.vaultId] || r.vaultId) : undefined,
+      date: r.createdAt.toISOString().slice(0, 10),
     }));
 
     const { text } = await generateText({
