@@ -48,6 +48,26 @@ export const BASE_TOKEN_DECIMALS: Record<string, number> = {
 export const ALLOWANCE_HOLDER =
   "0x0000000000001fF3684f28c67538d4D072C22734" as const;
 
+/** Per-vault accent palette — subtle, cream-compatible tones */
+export const VAULT_ACCENTS: Record<string, { color: string; bg: string; border: string }> = {
+  yoUSD: { color: "#6B8F5E", bg: "rgba(107,143,94,0.08)", border: "rgba(107,143,94,0.25)" },
+  yoETH: { color: "#6B89A8", bg: "rgba(107,137,168,0.08)", border: "rgba(107,137,168,0.25)" },
+  yoBTC: { color: "#B8943E", bg: "rgba(184,148,62,0.08)", border: "rgba(184,148,62,0.25)" },
+  yoEUR: { color: "#8B7BAA", bg: "rgba(139,123,170,0.08)", border: "rgba(139,123,170,0.25)" },
+  yoGOLD: { color: "#A89460", bg: "rgba(168,148,96,0.08)", border: "rgba(168,148,96,0.25)" },
+  yoUSDT: { color: "#5A9E82", bg: "rgba(90,158,130,0.08)", border: "rgba(90,158,130,0.25)" },
+};
+
+/** Token logos — local assets in /public/tokens/ */
+export const VAULT_LOGOS: Record<string, string> = {
+  yoUSD: "/tokens/usdc.png",
+  yoETH: "/tokens/eth.png",
+  yoBTC: "/tokens/btc.png",
+  yoEUR: "/tokens/eur.png",
+  yoGOLD: "/tokens/gold.png",
+  yoUSDT: "/tokens/usdt.png",
+};
+
 export const SYMBOL_TO_COINGECKO: Record<string, string> = {
   usdc: "usd-coin",
   weth: "ethereum",

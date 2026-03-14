@@ -39,16 +39,29 @@ interface ActivityListProps {
 export function ActivityList({ activities }: ActivityListProps) {
   if (activities.length === 0) {
     return (
-      <div className="rounded-lg border border-border p-5">
+      <div className="py-5 text-center">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          className="mx-auto mb-2 text-ink-light/30"
+        >
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         <p className="font-body text-sm text-ink-light">
-          No activity yet. Your transactions will appear here.
+          Nothing here yet
+        </p>
+        <p className="mt-0.5 font-mono text-[10px] text-ink-light/60">
+          Your deposits and withdrawals will show up here
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-border">
+    <div className="space-y-0">
       {activities.map((item, i) => {
         const iconPath = ICON_PATHS[item.type];
         const iconBg =
@@ -81,19 +94,19 @@ export function ActivityList({ activities }: ActivityListProps) {
               <p className="truncate font-body text-sm text-ink">
                 {activityDescription(item)}
               </p>
-              <p className="font-mono text-[10px] text-ink-light">
+              <p className="font-mono text-[10px] text-ink-light/60">
                 {formatRelativeTime(item.createdAt)}
               </p>
             </div>
-            <span className="flex-none font-mono text-xs text-ink">
+            <span className="flex-none font-mono text-xs text-ink-light">
               {item.amount} {item.tokenSymbol}
             </span>
           </>
         );
 
-        const rowClass = `flex items-center gap-3 px-4 py-3 transition-colors duration-200 ${
-          item.txHash ? "hover:bg-cream-dark/40" : ""
-        }${i < activities.length - 1 ? " border-b border-border/40" : ""}`;
+        const rowClass = `flex items-center gap-3 py-3 transition-colors duration-200 ${
+          item.txHash ? "hover:bg-cream-dark/30 -mx-3 px-3 rounded-xl" : ""
+        }${i < activities.length - 1 ? " border-b border-border/30" : ""}`;
 
         return item.txHash ? (
           <a

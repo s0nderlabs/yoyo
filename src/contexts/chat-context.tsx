@@ -18,6 +18,9 @@ interface ChatContextType {
   clearPrefill: () => void;
   dashboardData: DashboardData | null;
   registerDashboardData: (data: DashboardData) => void;
+  sidebarOpen: boolean;
+  openSidebar: () => void;
+  closeSidebar: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -25,6 +28,7 @@ const ChatContext = createContext<ChatContextType | null>(null);
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [prefill, setPrefill] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const dataRef = useRef<DashboardData | null>(null);
 
   const open = useCallback((msg?: string) => {
@@ -34,6 +38,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const close = useCallback(() => setIsOpen(false), []);
   const clearPrefill = useCallback(() => setPrefill(null), []);
+  const openSidebar = useCallback(() => setSidebarOpen(true), []);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   const registerDashboardData = useCallback((data: DashboardData) => {
     dataRef.current = data;
@@ -51,6 +57,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return dataRef.current;
         },
         registerDashboardData,
+        sidebarOpen,
+        openSidebar,
+        closeSidebar,
       }}
     >
       {children}

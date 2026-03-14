@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { VaultStatsItem } from "@yo-protocol/core";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -8,37 +8,21 @@ import { useActivities } from "@/hooks/use-activities";
 import { useGoals } from "@/hooks/use-goals";
 import { useChatSheet } from "@/contexts/chat-context";
 import { OverviewScreen } from "@/components/dashboard/overview-screen";
-import { DetailsScreen } from "@/components/dashboard/details-screen";
-import { BroadsheetLayout } from "@/components/dashboard/broadsheet-layout";
-import { SettingsSidebar } from "@/components/dashboard/settings-sidebar";
 import { DepositSheet } from "@/components/dashboard/deposit-sheet";
 import { WithdrawSheet } from "@/components/dashboard/withdraw-sheet";
 
 export default function DashboardPage() {
   const data = useDashboardData();
-  const { activities } = useActivities();
+  const { activities, refetch: refetchActivities } = useActivities();
   const { goals } = useGoals();
-  const { registerDashboardData } = useChatSheet();
+  const { registerDashboardData, openSidebar } = useChatSheet();
 
-  // Register dashboard data ref for chat context
   useEffect(() => {
     registerDashboardData(data);
   }, [data, registerDashboardData]);
 
-  const [activeScreen, setActiveScreen] = useState(0);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositVault, setDepositVault] = useState<VaultStatsItem | null>(null);
-  const [withdrawVault, setWithdrawVault] = useState<VaultStatsItem | null>(
-    null,
-  );
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const scrollLeft = scrollRef.current.scrollLeft;
-    const width = scrollRef.current.offsetWidth;
-    setActiveScreen(scrollLeft > width * 0.5 ? 1 : 0);
-  };
+  const [withdrawVault, setWithdrawVault] = useState<VaultStatsItem | null>(null);
 
   const handleDepositSuccess = () => {
     setDepositVault(null);
@@ -82,16 +66,10 @@ export default function DashboardPage() {
 
   return (
     <div className="relative">
-      <SettingsSidebar
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        walletBalanceUsd={data.walletBalanceUsd}
-      />
-
-      {/* Header chrome */}
+      {/* Header — settings gear only */}
       <div className="fixed top-0 right-0 left-0 z-30 flex items-center justify-between px-5 pt-[max(env(safe-area-inset-top),12px)] pb-2">
         <button
-          onClick={() => setSettingsOpen(true)}
+          onClick={openSidebar}
           className="rounded-full p-2 transition-colors duration-200 hover:bg-ink/[0.04]"
         >
           <svg
@@ -113,54 +91,25 @@ export default function DashboardPage() {
             />
           </svg>
         </button>
-
-        <div className="flex gap-1.5 lg:hidden">
-          <div
-            className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-              activeScreen === 0 ? "bg-ink" : "bg-border"
-            }`}
-          />
-          <div
-            className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-              activeScreen === 1 ? "bg-ink" : "bg-border"
-            }`}
-          />
-        </div>
       </div>
 
-      {/* Mobile: snap-scroll between screens */}
-      <div className="lg:hidden">
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="flex snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          <div className="w-full flex-none snap-center">
-            <OverviewScreen data={data} />
-          </div>
-          <div className="w-full flex-none snap-center">
-            <DetailsScreen
-              data={data}
-              activities={mappedActivities}
-              goals={goalsMap}
-              onVaultTap={setDepositVault}
-              onPositionTap={setWithdrawVault}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop: newspaper broadsheet */}
-      <BroadsheetLayout
-        className="hidden lg:block"
+      {/* The app — one editorial page */}
+      <OverviewScreen
         data={data}
         activities={mappedActivities}
         goals={goalsMap}
         onVaultTap={setDepositVault}
         onPositionTap={setWithdrawVault}
+        onRefresh={async () => {
+          await Promise.all([
+            data.refetchPositions(),
+            data.refetchBalances(),
+            refetchActivities(),
+          ]);
+        }}
       />
 
-      {/* Sheets with exit animations */}
+      {/* Sheets */}
       <AnimatePresence>
         {depositVault && (
           <DepositSheet

@@ -113,3 +113,16 @@ body::before {
 .slider-sage:disabled {
   opacity: 0.4;
 }
+
+/* ─── Looping wave — waves ~2s then idles ~6s, repeats forever ─── */
+
+@keyframes wave-loop {
+  0%   { transform: rotate(0deg); }
+  4%   { transform: rotate(14deg); }
+  8%   { transform: rotate(-8deg); }
+  12%  { transform: rotate(14deg); }
+  16%  { transform: rotate(-4deg); }
+  20%  { transform: rotate(10deg); }
+  24%  { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}

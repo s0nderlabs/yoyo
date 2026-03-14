@@ -14,11 +14,8 @@ import { ToolApprovalCard } from "./tool-approval-card";
 import { ToolResultCard } from "./tool-result-card";
 
 export function ChatSheet() {
-  const { isOpen } = useChatSheet();
   const { initialMessages, isLoaded, hasHistory, saveNewMessages } =
     useChatPersistence();
-
-  if (!isOpen) return null;
 
   if (!isLoaded) {
     return <ChatSheetSkeleton />;

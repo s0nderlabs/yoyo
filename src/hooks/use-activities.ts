@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 
 interface Activity {
   id: string;
@@ -14,6 +15,7 @@ interface Activity {
 }
 
 export function useActivities(limit = 20) {
+  const { ready, authenticated } = usePrivy();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,6 +33,7 @@ export function useActivities(limit = 20) {
   }, [limit]);
 
   useEffect(() => {
+    if (!ready || !authenticated) return;
     let cancelled = false;
     (async () => {
       try {
@@ -45,7 +48,7 @@ export function useActivities(limit = 20) {
       }
     })();
     return () => { cancelled = true; };
-  }, [limit]);
+  }, [limit, ready, authenticated]);
 
   return { activities, isLoading, refetch };
 }

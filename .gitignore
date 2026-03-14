@@ -21,3 +21,7 @@ public/swe-worker*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# Claude
+CLAUDE.md
+.claude/

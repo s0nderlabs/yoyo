@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import {
   useVaults,
@@ -18,6 +18,13 @@ export interface TypedPosition {
   position: UserVaultPosition;
 }
 
+export interface DashboardCache {
+  totalSavingsUsd: number;
+  walletBalanceUsd: number;
+  positionVaultIds: string[];
+  timestamp: number;
+}
+
 export interface DashboardData {
   baseVaults: VaultStatsItem[];
   allVaults: VaultStatsItem[];
@@ -32,8 +39,22 @@ export interface DashboardData {
 
   prices: Record<string, number>;
 
-  refetchPositions: () => void;
-  refetchBalances: () => void;
+  cache: DashboardCache | null;
+
+  refetchPositions: () => Promise<unknown>;
+  refetchBalances: () => Promise<unknown>;
+}
+
+const CACHE_KEY = "yoyo:dashboard-cache";
+
+function readCache(): DashboardCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function useDashboardData(): DashboardData {
@@ -52,6 +73,8 @@ export function useDashboardData(): DashboardData {
     refetch: refetchBalances,
   } = useUserBalances(walletAddress, { enabled: !!walletAddress });
   const { prices = {} } = usePrices();
+
+  const [cache] = useState<DashboardCache | null>(readCache);
 
   const baseVaults = useMemo(() => {
     const filtered = vaults.filter(
@@ -84,6 +107,27 @@ export function useDashboardData(): DashboardData {
     ? parseFloat(balances.totalBalanceUsd)
     : 0;
 
+  const userLoading = positionsLoading || balancesLoading;
+
+  // Write to cache when fresh data arrives
+  useEffect(() => {
+    if (!userLoading && walletAddress) {
+      try {
+        localStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            totalSavingsUsd,
+            walletBalanceUsd,
+            positionVaultIds: positions.map((p) => p.vault.id),
+            timestamp: Date.now(),
+          }),
+        );
+      } catch {
+        // silent fail
+      }
+    }
+  }, [userLoading, walletAddress, totalSavingsUsd, walletBalanceUsd, positions]);
+
   return useMemo(
     () => ({
       baseVaults,
@@ -95,9 +139,11 @@ export function useDashboardData(): DashboardData {
       totalSavingsUsd,
       positions,
       hasPositions: positions.length > 0,
-      userLoading: positionsLoading || balancesLoading,
+      userLoading,
 
       prices,
+
+      cache,
 
       refetchPositions,
       refetchBalances,
@@ -110,9 +156,9 @@ export function useDashboardData(): DashboardData {
       walletBalanceUsd,
       totalSavingsUsd,
       positions,
-      positionsLoading,
-      balancesLoading,
+      userLoading,
       prices,
+      cache,
       refetchPositions,
       refetchBalances,
     ],
