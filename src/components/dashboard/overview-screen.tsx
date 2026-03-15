@@ -321,13 +321,30 @@ export function OverviewScreen({
   }, []);
 
   const cardBase =
-    "relative overflow-hidden rounded-[2rem] bg-cream shadow-[0_4px_20px_rgba(0,0,0,0.08)]";
+    "relative overflow-hidden rounded-[2rem] bg-cream shadow-[0_2px_24px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.03)]";
 
-  const savingsTint =
-    "pointer-events-none absolute inset-0 rounded-[inherit] border border-sage/30 bg-[rgba(143,174,130,0.22)]";
+  // Liquid metal — jade emerald (savings) + gold (balance), premium credit card aesthetic
+  const savingsMetal = {
+    background: [
+      "radial-gradient(ellipse at 20% 10%, rgba(180,220,190,0.35) 0%, transparent 40%)",
+      "radial-gradient(ellipse at 80% 90%, rgba(30,70,40,0.4) 0%, transparent 45%)",
+      "radial-gradient(ellipse at 5% 75%, rgba(100,160,110,0.3) 0%, transparent 35%)",
+      "radial-gradient(ellipse at 95% 20%, rgba(140,190,150,0.2) 0%, transparent 30%)",
+      "conic-gradient(from 150deg at 110% 110%, rgba(60,120,70,0.35), rgba(90,155,100,0.25) 20%, rgba(160,210,165,0.4) 45%, rgba(40,95,50,0.35) 65%, rgba(110,170,120,0.3) 85%, rgba(60,120,70,0.35))",
+    ].join(", "),
+    borderColor: "rgba(80,140,90,0.3)",
+  };
 
-  const balanceTint =
-    "pointer-events-none absolute inset-0 rounded-[inherit] border border-[rgba(184,148,62,0.25)] bg-[rgba(184,148,62,0.16)]";
+  const balanceMetal = {
+    background: [
+      "radial-gradient(ellipse at 80% 10%, rgba(255,240,200,0.4) 0%, transparent 40%)",
+      "radial-gradient(ellipse at 20% 90%, rgba(120,90,30,0.35) 0%, transparent 45%)",
+      "radial-gradient(ellipse at 95% 70%, rgba(230,200,130,0.3) 0%, transparent 35%)",
+      "radial-gradient(ellipse at 5% 25%, rgba(200,175,100,0.2) 0%, transparent 30%)",
+      "conic-gradient(from 200deg at -10% -10%, rgba(180,150,60,0.35), rgba(210,180,90,0.25) 20%, rgba(250,235,170,0.4) 45%, rgba(150,120,40,0.35) 65%, rgba(200,170,80,0.3) 85%, rgba(180,150,60,0.35))",
+    ].join(", "),
+    borderColor: "rgba(180,150,70,0.3)",
+  };
 
   return (
     <div
@@ -404,7 +421,7 @@ export function OverviewScreen({
             <div className="px-6 sm:px-10">
               <div className="mx-auto max-w-lg">
                 <div className={cardBase}>
-                  <div className={savingsTint} />
+                  <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: savingsMetal.background, borderColor: savingsMetal.borderColor }} />
                   <div className="relative aspect-[1.6/1] p-7">
                     <div className="h-4 w-20 animate-pulse rounded bg-ink/[0.06]" />
                     <div className="mt-6 h-10 w-32 animate-pulse rounded bg-ink/[0.08]" />
@@ -426,45 +443,31 @@ export function OverviewScreen({
                   transition={{ duration: 0.3 }}
                 >
                   <div className={cardBase}>
-                    <div className={savingsTint} />
+                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: savingsMetal.background, borderColor: savingsMetal.borderColor }} />
                     <CardGrain />
                     <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
-                      <p className="font-mono text-[10px] tracking-[0.12em] text-ink-light/50 uppercase">
-                        {data.hasPositions || displayVaultIds.length > 0 ? "Total Savings" : "Earn up to"}
+                      <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
+                        {data.hasPositions || displayVaultIds.length > 0 ? "Total savings" : "Earn up to"}
                       </p>
                       {data.hasPositions || displayVaultIds.length > 0 ? (
-                        <OdometerNumber
-                          value={displaySavings}
-                          format={formatUsd}
-                          className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
-                        />
+                        <div>
+                          <OdometerNumber
+                            value={displaySavings}
+                            format={formatUsd}
+                            className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
+                          />
+                          {displayVaultIds.length > 0 && (
+                            <p className="mt-1.5 font-body text-[11px] text-ink-light/40">
+                              across {displayVaultIds.length} {displayVaultIds.length === 1 ? "account" : "accounts"}
+                            </p>
+                          )}
+                        </div>
                       ) : (
                         <p className="font-display text-[2.5rem] leading-none tracking-tight text-sage sm:text-[3rem]">
                           {bestApy > 0 ? formatApy(String(bestApy)) : "5.0%"}
                         </p>
                       )}
-                      <div className="flex items-center justify-end gap-3">
-                        {(displayVaultIds.length > 0 ? displayVaultIds : availableVaultIds).map((id) => {
-                          const logo = VAULT_LOGOS[id];
-                          const label = VAULT_SHORT[id] || id;
-                          return (
-                            <div key={id} className="flex flex-col items-center gap-1.5">
-                              {logo && (
-                                <img
-                                  src={logo}
-                                  alt={label}
-                                  width={32}
-                                  height={32}
-                                  className="h-8 w-8 rounded-full"
-                                />
-                              )}
-                              <span className="font-mono text-[9px] tracking-wide text-ink-light/40">
-                                {label}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <div />
                     </div>
                   </div>
                 </motion.div>
@@ -476,39 +479,29 @@ export function OverviewScreen({
                   transition={{ duration: 0.3 }}
                 >
                   <div className={cardBase}>
-                    <div className={balanceTint} />
+                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: balanceMetal.background, borderColor: balanceMetal.borderColor }} />
                     <CardGrain />
                     <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
-                      <p className="font-mono text-[10px] tracking-[0.12em] text-ink-light/50 uppercase">
-                        Wallet Balance
+                      <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
+                        Wallet balance
                       </p>
-                      <OdometerNumber
-                        value={displayBalance ?? 0}
-                        format={formatUsd}
-                        className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
-                      />
-                      <div className="flex items-end justify-between">
-                        {data.walletAssets.length > 0 ? (
-                          <div className="flex flex-wrap gap-x-3 gap-y-1">
-                            {data.walletAssets.slice(0, 4).map((a) => {
-                              const logo = TOKEN_LOGOS[a.symbol];
-                              return (
-                                <span key={a.symbol} className="flex items-center gap-1.5">
-                                  {logo && (
-                                    <img src={logo} alt="" width={14} height={14} className="h-3.5 w-3.5 rounded-full" />
-                                  )}
-                                  <span className="font-body text-[11px] text-ink-light/60">
-                                    {parseFloat(a.balance).toLocaleString("en-US", { maximumFractionDigits: 4 })} {a.symbol}
-                                  </span>
-                                </span>
-                              );
-                            })}
+                      <div>
+                        <OdometerNumber
+                          value={displayBalance ?? 0}
+                          format={formatUsd}
+                          className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
+                        />
+                        {data.walletAssets.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+                            {data.walletAssets.slice(0, 4).map((a) => (
+                              <span key={a.symbol} className="font-body text-[11px] text-ink-light/40">
+                                {parseFloat(a.balance).toLocaleString("en-US", { maximumFractionDigits: 4 })} {a.symbol}
+                              </span>
+                            ))}
                           </div>
-                        ) : (
-                          <div />
                         )}
-                        <WalletIcon className="h-6 w-6 flex-none text-ink/10" />
                       </div>
+                      <div />
                     </div>
                   </div>
                 </motion.div>
