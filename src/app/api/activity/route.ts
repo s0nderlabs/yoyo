@@ -77,7 +77,8 @@ export async function POST(req: Request) {
       .returning();
 
     return NextResponse.json({ activity });
-  } catch {
+  } catch (err) {
+    console.error("[Activity] Insert error:", err);
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }

@@ -161,6 +161,9 @@ export function ChatSheet({ visible }: ChatSheetProps) {
               const hasText = message.parts.some(
                 (p) => p.type === "text" && p.text.trim(),
               );
+              const hasActionToolParts = message.parts.some(
+                (p) => p.type.startsWith("tool-") && ["deposit", "withdraw", "swap", "swap_and_deposit"].includes(p.type.slice(5)),
+              );
 
               return (
                 <div key={message.id} data-role={message.role}>
@@ -209,7 +212,7 @@ export function ChatSheet({ visible }: ChatSheetProps) {
                   {message.role === "assistant" && !hasText && isBusy && (
                     <ThinkingIndicator />
                   )}
-                  {message.role === "assistant" && !hasText && !isBusy && (
+                  {message.role === "assistant" && !hasText && !hasActionToolParts && !isBusy && (
                     <MessageBubble role="assistant" text="Let me try that again — could you rephrase?" />
                   )}
                 </div>
@@ -219,6 +222,12 @@ export function ChatSheet({ visible }: ChatSheetProps) {
             {status === "submitted" && (
               <div data-role="assistant">
                 <ThinkingIndicator />
+              </div>
+            )}
+            {/* Error fallback when request fails without creating assistant message */}
+            {status === "error" && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+              <div data-role="assistant">
+                <MessageBubble role="assistant" text="Something went wrong — please try again." />
               </div>
             )}
           </div>

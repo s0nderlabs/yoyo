@@ -107,7 +107,7 @@ export function DepositSheet({
       onCancel: () => onCloseRef.current(),
       step,
     });
-    return () => setActiveSheet(null);
+    return () => setActiveSheet((prev) => prev?.type === "deposit" ? null : prev);
   }, [step, setActiveSheet]);
 
   const handleAmountTap = useCallback(() => {

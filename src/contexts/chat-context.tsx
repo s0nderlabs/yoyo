@@ -29,7 +29,7 @@ interface ChatContextType {
   openSidebar: () => void;
   closeSidebar: () => void;
   activeSheet: ActiveSheet | null;
-  setActiveSheet: (sheet: ActiveSheet | null) => void;
+  setActiveSheet: React.Dispatch<React.SetStateAction<ActiveSheet | null>>;
   chatInput: string;
   setChatInput: (v: string) => void;
   sendMessage: (text: string) => void;

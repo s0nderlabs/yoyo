@@ -103,7 +103,7 @@ export function WithdrawSheet({
       onCancel: () => onCloseRef.current(),
       step,
     });
-    return () => setActiveSheet(null);
+    return () => setActiveSheet((prev) => prev?.type === "withdraw" ? null : prev);
   }, [step, setActiveSheet]);
 
   const name = VAULT_FRIENDLY_NAMES[vault.id] || vault.name;

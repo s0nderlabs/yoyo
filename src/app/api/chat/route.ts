@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const windowed = windowMessages(messages);
 
   const result = streamText({
-    model: deepseek("deepseek-reasoner"),
+    model: deepseek("deepseek-chat"),
     system: buildSystemPrompt({
       userName,
       walletAddress,
@@ -56,5 +56,5 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(5),
   });
 
-  return result.toUIMessageStreamResponse({ sendReasoning: true });
+  return result.toUIMessageStreamResponse();
 }
