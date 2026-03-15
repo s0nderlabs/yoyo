@@ -11,7 +11,7 @@ import {
 import type { DashboardData } from "@/hooks/use-dashboard-data";
 
 export interface ActiveSheet {
-  type: "deposit" | "withdraw";
+  type: "deposit" | "withdraw" | "swap";
   onConfirm: () => void;
   onCancel: () => void;
   step: "idle" | "processing" | "success" | "error";

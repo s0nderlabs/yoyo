@@ -110,7 +110,7 @@ function ChatInputBar() {
 
   const stepLabel = activeSheet
     ? activeSheet.step === "idle"
-      ? activeSheet.type === "deposit" ? "Deposit" : "Withdraw"
+      ? activeSheet.type === "deposit" ? "Deposit" : activeSheet.type === "swap" ? "Confirm" : "Withdraw"
       : activeSheet.step === "processing"
         ? "Processing..."
         : activeSheet.step === "success"

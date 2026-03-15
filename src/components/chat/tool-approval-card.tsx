@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { parseUnits, encodeFunctionData, erc20Abi } from "viem";
 import type { Address, Hex } from "viem";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
@@ -16,6 +16,7 @@ import {
 import { formatApy } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
 import { useVaultDeposit, useVaultRedeem } from "@/hooks/use-vault-tx";
+import { useChatSheet } from "@/contexts/chat-context";
 
 type AddToolResultFn = (params: {
   tool: string;
@@ -137,6 +138,7 @@ function SwapDepositPending({
   const walletAddress = (user?.smartWallet?.address ??
     user?.wallet?.address) as Address | undefined;
 
+  const { setActiveSheet } = useChatSheet();
   const [executing, setExecuting] = useState(false);
 
   const isSwapOnly = !vaultId;
@@ -268,46 +270,38 @@ function SwapDepositPending({
     sendResult({ success: false, error: "User cancelled" });
   }, [sendResult]);
 
-  return (
-    <div className="my-2 rounded-xl border border-sage/20 bg-cream-dark/30 px-4 py-4">
-      <div>
-        <p className="font-display text-lg text-ink">
-          Swap {sellAmount} {sellToken?.toUpperCase() || "?"} &rarr;{" "}
-          {Number(expectedBuyAmount || 0).toLocaleString("en-US", {
-            maximumFractionDigits: 6,
-          })}{" "}
-          {buyToken?.toUpperCase() || "?"}
-        </p>
-        {!isSwapOnly && (
-          <p className="mt-0.5 font-mono text-xs text-ink-light">
-            then save in {friendlyName}
-            {apy !== "--" && ` · ${apy} interest`}
-          </p>
-        )}
-      </div>
+  // Morph input bar to show Cancel/Confirm
+  const confirmRef = useRef(handleConfirm);
+  const cancelRef = useRef(handleCancel);
+  confirmRef.current = handleConfirm;
+  cancelRef.current = handleCancel;
 
-      {executing ? (
-        <div className="mt-3 flex items-center gap-2">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sage" />
-          <span className="font-mono text-xs text-ink-light">
-            {isSwapOnly ? "Converting..." : "Swapping & saving..."}
-          </span>
-        </div>
-      ) : (
-        <div className="mt-3 flex gap-2">
-          <button
-            onClick={handleCancel}
-            className="flex-1 rounded-lg border border-border px-4 py-2 font-mono text-xs tracking-wide text-ink-light transition-colors duration-200 hover:bg-ink/[0.04]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="flex-1 rounded-lg bg-sage px-4 py-2 font-mono text-xs tracking-wide text-cream transition-colors duration-200 hover:bg-sage-light"
-          >
-            Confirm
-          </button>
-        </div>
+  const sheetType = isSwapOnly ? "swap" as const : "deposit" as const;
+  const step = executing ? "processing" as const : "idle" as const;
+  useEffect(() => {
+    setActiveSheet({
+      type: sheetType,
+      onConfirm: () => confirmRef.current(),
+      onCancel: () => cancelRef.current(),
+      step,
+    });
+    return () => setActiveSheet((prev) => prev?.type === sheetType ? null : prev);
+  }, [step, setActiveSheet]);
+
+  return (
+    <div className="my-2 rounded-xl border border-sage/20 bg-cream-dark/30 px-4 py-3">
+      <p className="font-display text-lg text-ink">
+        Swap {sellAmount} {sellToken?.toUpperCase() || "?"} &rarr;{" "}
+        {Number(expectedBuyAmount || 0).toLocaleString("en-US", {
+          maximumFractionDigits: 6,
+        })}{" "}
+        {buyToken?.toUpperCase() || "?"}
+      </p>
+      {!isSwapOnly && (
+        <p className="mt-0.5 font-body text-xs text-ink-light">
+          then save in {friendlyName}
+          {apy !== "--" && ` · ${apy} interest`}
+        </p>
       )}
     </div>
   );
@@ -417,46 +411,34 @@ function PendingApproval({
     sendResult({ success: false, error: "User cancelled" });
   };
 
-  const stepLabel = executing ? "Processing..." : null;
+  // Morph input bar to show Cancel/Confirm
+  const { setActiveSheet } = useChatSheet();
+  const confirmRef = useRef(handleConfirm);
+  const cancelRef = useRef(handleCancel);
+  confirmRef.current = handleConfirm;
+  cancelRef.current = handleCancel;
+
+  const step = executing ? "processing" as const : "idle" as const;
+  useEffect(() => {
+    setActiveSheet({
+      type: toolName as "deposit" | "withdraw",
+      onConfirm: () => confirmRef.current(),
+      onCancel: () => cancelRef.current(),
+      step,
+    });
+    return () => setActiveSheet((prev) => prev?.type === toolName ? null : prev);
+  }, [step, setActiveSheet, toolName]);
 
   return (
-    <div className="my-2 rounded-xl border border-sage/20 bg-cream-dark/30 px-4 py-4">
-      <div>
-        <p className="font-display text-lg text-ink">
-          {toolName === "deposit" ? "Save" : "Withdraw"} {amount}{" "}
-          {tokenSymbol}
-        </p>
-        <p className="mt-0.5 font-mono text-xs text-ink-light">
-          {friendlyName}
-          {apy !== "--" && ` · ${apy} interest`}
-        </p>
-      </div>
-
-      {executing && stepLabel ? (
-        <div className="mt-3 flex items-center gap-2">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sage" />
-          <span className="font-mono text-xs text-ink-light">
-            {stepLabel}
-          </span>
-        </div>
-      ) : (
-        <div className="mt-3 flex gap-2">
-          <button
-            onClick={handleCancel}
-            disabled={executing}
-            className="flex-1 rounded-lg border border-border px-4 py-2 font-mono text-xs tracking-wide text-ink-light transition-colors duration-200 hover:bg-ink/[0.04] disabled:opacity-40"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={executing}
-            className="flex-1 rounded-lg bg-sage px-4 py-2 font-mono text-xs tracking-wide text-cream transition-colors duration-200 hover:bg-sage-light disabled:opacity-40"
-          >
-            Confirm
-          </button>
-        </div>
-      )}
+    <div className="my-2 rounded-xl border border-sage/20 bg-cream-dark/30 px-4 py-3">
+      <p className="font-display text-lg text-ink">
+        {toolName === "deposit" ? "Save" : "Withdraw"} {amount}{" "}
+        {tokenSymbol}
+      </p>
+      <p className="mt-0.5 font-body text-xs text-ink-light">
+        {friendlyName}
+        {apy !== "--" && ` · ${apy} interest`}
+      </p>
     </div>
   );
 }
