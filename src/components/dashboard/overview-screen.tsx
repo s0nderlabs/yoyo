@@ -10,6 +10,7 @@ import { formatUsd, formatApy } from "@/lib/format";
 import { VAULT_LOGOS, VAULT_FRIENDLY_NAMES, TOKEN_LOGOS, NARRATION_CACHE_KEY } from "@/lib/constants";
 import { OdometerNumber } from "@/components/ui/odometer-number";
 import { PositionCard } from "./position-card";
+import { GoalCard } from "./goal-card";
 import { VaultCard } from "./vault-card";
 import { ActivityList, type ActivityItem } from "./activity-list";
 
@@ -293,7 +294,22 @@ export function OverviewScreen({
 
   // Cache-aware flags — show content if real data OR cache is available
   const hasData = !data.userLoading || data.cache !== null;
-  const showPositions = data.hasPositions || (data.userLoading && (data.cache?.positionVaultIds?.length ?? 0) > 0);
+  const hasGoals = goals ? Object.keys(goals).length > 0 : false;
+  const showPositions = data.hasPositions || hasGoals || (data.userLoading && (data.cache?.positionVaultIds?.length ?? 0) > 0);
+
+  // Goals without a matching position — render as motivation cards
+  const orphanGoals = useMemo(() => {
+    if (!goals) return [];
+    const posVaultIds = new Set(data.positions.map((p) => p.vault.id));
+    return Object.entries(goals)
+      .filter(([vid]) => !posVaultIds.has(vid))
+      .map(([vid, goal]) => ({
+        vaultId: vid,
+        goal,
+        vault: data.baseVaults.find((v) => v.id === vid),
+      }))
+      .filter((e): e is typeof e & { vault: VaultStatsItem } => !!e.vault);
+  }, [goals, data.positions, data.baseVaults]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -516,7 +532,7 @@ export function OverviewScreen({
         {/* ── Editorial prose (APY + closer) ──────────────── */}
         <div className="px-6 sm:px-10">
           <div className="mx-auto w-full max-w-lg">
-            {hasData && showPositions && (
+            {hasData && data.hasPositions && (
               <motion.p
                 {...proseReveal}
                 className="mt-6 font-body text-[1.25rem] leading-relaxed text-ink sm:text-[1.4rem]"
@@ -529,7 +545,7 @@ export function OverviewScreen({
               </motion.p>
             )}
 
-            {hasData && !showPositions && (
+            {hasData && !data.hasPositions && (
               <motion.p
                 {...proseReveal}
                 className="mt-6 font-body text-[1.25rem] leading-relaxed text-ink sm:text-[1.4rem]"
@@ -538,24 +554,36 @@ export function OverviewScreen({
               </motion.p>
             )}
 
-            {/* ── Positions ──────────────────────────────── */}
+            {/* ── Positions + Goals ──────────────────────── */}
             {hasData && showPositions && (
               <motion.section {...sectionReveal(0)} className="mt-10">
                 <p className="font-body text-[1.25rem] leading-relaxed text-ink sm:text-[1.4rem]">
-                  Here&rsquo;s where your money is working.
+                  {data.hasPositions
+                    ? "Here\u2019s where your money is working."
+                    : "Here\u2019s what you\u2019re saving for."}
                 </p>
                 <div className="mt-4 space-y-3">
-                  {data.positions.length > 0 ? (
-                    data.positions.map((p) => (
-                      <PositionCard
-                        key={`${p.vault.id}-${p.vault.chain.id}`}
-                        vault={p.vault}
-                        position={p.position}
-                        prices={data.prices}
-                        goal={goals?.[p.vault.id]}
-                        onTap={onPositionTap}
-                      />
-                    ))
+                  {data.positions.length > 0 || orphanGoals.length > 0 ? (
+                    <>
+                      {data.positions.map((p) => (
+                        <PositionCard
+                          key={`${p.vault.id}-${p.vault.chain.id}`}
+                          vault={p.vault}
+                          position={p.position}
+                          prices={data.prices}
+                          goal={goals?.[p.vault.id]}
+                          onTap={onPositionTap}
+                        />
+                      ))}
+                      {orphanGoals.map((entry) => (
+                        <GoalCard
+                          key={`goal-${entry.vaultId}`}
+                          goal={entry.goal}
+                          vault={entry.vault}
+                          onTap={onVaultTap}
+                        />
+                      ))}
+                    </>
                   ) : (
                     <div className="h-16 animate-pulse rounded-xl bg-ink/[0.04]" />
                   )}
