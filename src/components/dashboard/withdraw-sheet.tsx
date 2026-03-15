@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import type { Address } from "viem";
 import type { VaultStatsItem, UserVaultPosition } from "@yo-protocol/core";
@@ -107,7 +108,7 @@ export function WithdrawSheet({
 
   const name = VAULT_FRIENDLY_NAMES[vault.id] || vault.name;
 
-  return (
+  return createPortal(
     <>
       <motion.div
         key="withdraw-backdrop"
@@ -243,6 +244,7 @@ export function WithdrawSheet({
           </>
         )}
       </motion.div>
-    </>
+    </>,
+    document.body,
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { parseUnits } from "viem";
 import type { Address } from "viem";
@@ -125,7 +126,7 @@ export function DepositSheet({
   const name = VAULT_FRIENDLY_NAMES[vault.id] || vault.name;
   const apy = formatApy(vault.yield?.["7d"]);
 
-  return (
+  return createPortal(
     <>
       <motion.div
         key="deposit-backdrop"
@@ -301,6 +302,7 @@ export function DepositSheet({
           </>
         )}
       </motion.div>
-    </>
+    </>,
+    document.body,
   );
 }
