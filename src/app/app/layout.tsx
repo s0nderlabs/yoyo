@@ -98,6 +98,40 @@ function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 const morphEase = [0.16, 1, 0.3, 1] as const;
+const morphProps = {
+  initial: { opacity: 0, scale: 0.97 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.97 },
+  transition: { duration: 0.2, ease: morphEase },
+};
+const iconMorphProps = (dir: 1 | -1) => ({
+  initial: { opacity: 0, scale: 0.6, rotate: dir * 90 },
+  animate: { opacity: 1, scale: 1, rotate: 0 },
+  exit: { opacity: 0, scale: 0.6, rotate: dir * -90 },
+  transition: { duration: 0.15, ease: morphEase },
+});
+
+const MicIcon = ({ className = "text-sage" }: { className?: string }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
+    <path d="M8 1a2.5 2.5 0 00-2.5 2.5v4a2.5 2.5 0 005 0v-4A2.5 2.5 0 008 1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M12 7.5a4 4 0 01-8 0M8 12.5v2M6.5 14.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const ArrowIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-sage">
+    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+// Fixed pill height — matches the action button's natural height so all states are identical
+const PILL_INNER = "flex h-[66px] w-full items-center px-5";
 
 function ChatInputBar() {
   const { open, isOpen, activeSheet, chatInput, setChatInput, sendMessage, isStreaming } = useChatSheet();
@@ -117,18 +151,15 @@ function ChatInputBar() {
           ? "Done!"
           : "Try again"
     : null;
-
   const stepBg = activeSheet?.step === "error" ? "bg-fail" : "bg-sage";
-  const isDisabled = activeSheet?.step === "processing" || activeSheet?.step === "success";
+  const isActionDisabled = activeSheet?.step === "processing" || activeSheet?.step === "success";
 
-  // Focus input when chat opens
   useEffect(() => {
     if (isOpen && !activeSheet && !isRecording) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen, activeSheet, isRecording]);
 
-  // Auto-clear voice errors after 3s
   useEffect(() => {
     if (voiceError) {
       const t = setTimeout(clearError, 3000);
@@ -138,15 +169,13 @@ function ChatInputBar() {
 
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (chatInput.trim() && !isStreaming) {
-      sendMessage(chatInput);
-    }
+    if (chatInput.trim() && !isStreaming) sendMessage(chatInput);
   };
 
   const handleMicTap = async () => {
     if (isRecording) {
       const blob = await stopRecording();
-      if (!blob) return; // too short or cancelled
+      if (!blob) return;
       setIsTranscribing(true);
       try {
         const formData = new FormData();
@@ -156,7 +185,6 @@ function ChatInputBar() {
         const { text } = await res.json();
         if (text?.trim()) {
           sendMessage(text.trim());
-          // Open chat panel AFTER sending — panel slides up with content already flowing
           if (!isOpen) open();
         }
       } catch {
@@ -165,28 +193,25 @@ function ChatInputBar() {
         setIsTranscribing(false);
       }
     } else {
-      // Start recording — don't open chat panel yet
       startRecording();
     }
   };
 
-  const showMic = isOpen && !activeSheet && !isStreaming && !chatInput.trim();
-  const showIdleMic = !isOpen && !activeSheet;
+  // Determine mode
+  const mode = activeSheet ? "action"
+    : isRecording ? "recording"
+    : isTranscribing ? "transcribing"
+    : isOpen ? "chat"
+    : "idle";
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[60] px-4 pb-[max(env(safe-area-inset-bottom),20px)] pt-3">
       <div className="mx-auto max-w-lg lg:max-w-3xl">
         <div className="overflow-hidden rounded-full border border-border/60 bg-cream/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] backdrop-blur-xl transition-colors duration-300">
           <AnimatePresence mode="wait" initial={false}>
-            {activeSheet ? (
-              <motion.div
-                key="action"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.2, ease: morphEase }}
-                className="flex w-full items-center justify-between px-5 py-2.5"
-              >
+
+            {mode === "action" && activeSheet && (
+              <motion.div key="action" {...morphProps} className={`${PILL_INNER} justify-between`}>
                 <button
                   onClick={activeSheet.onCancel}
                   disabled={activeSheet.step === "processing"}
@@ -196,7 +221,7 @@ function ChatInputBar() {
                 </button>
                 <button
                   onClick={activeSheet.onConfirm}
-                  disabled={isDisabled}
+                  disabled={isActionDisabled}
                   className={`rounded-full ${stepBg} px-6 py-2 font-body text-sm text-cream transition-all duration-200 disabled:opacity-70 ${
                     activeSheet.step === "processing" ? "animate-pulse" : ""
                   }`}
@@ -204,128 +229,63 @@ function ChatInputBar() {
                   {stepLabel}
                 </button>
               </motion.div>
-            ) : isRecording ? (
-              <motion.div
-                key="recording"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.2, ease: morphEase }}
-                className="flex w-full items-center gap-3 px-5 py-3"
-              >
-                <button
-                  onClick={cancelRecording}
-                  className="rounded-full p-1 text-ink-light/60 transition-opacity hover:text-ink"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+            )}
+
+            {mode === "recording" && (
+              <motion.div key="recording" {...morphProps} className={`${PILL_INNER} gap-3`}>
+                <button onClick={cancelRecording} className="rounded-full p-1 text-ink-light/60 transition-opacity hover:text-ink">
+                  <CloseIcon />
                 </button>
                 <div className="flex-1">
                   <VoiceWaveform analyserNode={analyserNode} isRecording={isRecording} />
                 </div>
-                <button
-                  onClick={handleMicTap}
-                  className="rounded-full bg-sage p-1.5 text-cream transition-transform duration-200 active:scale-90"
-                >
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </motion.div>
-            ) : isTranscribing ? (
-              <motion.div
-                key="transcribing"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.2, ease: morphEase }}
-                className="flex w-full items-center justify-center px-5 py-3"
-              >
-                <span className="animate-pulse font-body text-sm text-sage">
-                  Transcribing...
-                </span>
-              </motion.div>
-            ) : isOpen ? (
-                <motion.form
-                  key="chat-input"
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ duration: 0.2, ease: morphEase }}
-                  onSubmit={handleChatSubmit}
-                  className="flex w-full items-center gap-3 px-5 py-3"
-                >
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={voiceError ? "Mic unavailable — type instead" : "Ask anything..."}
-                    className="flex-1 bg-transparent font-body text-sm text-ink outline-none placeholder:text-ink-light/40"
-                  />
-                  <AnimatePresence mode="wait" initial={false}>
-                    {chatInput.trim() ? (
-                      <motion.button
-                        key="send"
-                        type="submit"
-                        disabled={isStreaming}
-                        initial={{ opacity: 0, scale: 0.6, rotate: -90 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0, scale: 0.6, rotate: 90 }}
-                        transition={{ duration: 0.15, ease: morphEase }}
-                        className="rounded-full p-1 transition-opacity duration-200 disabled:opacity-30"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-sage">
-                          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </motion.button>
-                    ) : (
-                      <motion.button
-                        key="mic"
-                        type="button"
-                        onClick={handleMicTap}
-                        disabled={isStreaming}
-                        initial={{ opacity: 0, scale: 0.6, rotate: 90 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0, scale: 0.6, rotate: -90 }}
-                        transition={{ duration: 0.15, ease: morphEase }}
-                        className="rounded-full p-1 transition-opacity duration-200 disabled:opacity-30"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-sage">
-                          <path d="M8 1a2.5 2.5 0 00-2.5 2.5v4a2.5 2.5 0 005 0v-4A2.5 2.5 0 008 1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M12 7.5a4 4 0 01-8 0M8 12.5v2M6.5 14.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                </motion.form>
-            ) : (
-              <motion.div
-                key="idle"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.2, ease: morphEase }}
-                className="flex w-full items-center gap-3 px-5 py-3.5"
-              >
-                <button
-                  onClick={() => open()}
-                  className="flex-1 text-left font-body text-sm text-ink-light/50"
-                >
-                  anything...
-                </button>
-                <button
-                  onClick={handleMicTap}
-                  className="rounded-full p-1 transition-opacity duration-200"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-ink-light/30">
-                    <path d="M8 1a2.5 2.5 0 00-2.5 2.5v4a2.5 2.5 0 005 0v-4A2.5 2.5 0 008 1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12 7.5a4 4 0 01-8 0M8 12.5v2M6.5 14.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                <button onClick={handleMicTap} className="rounded-full bg-sage p-1.5 text-cream transition-transform duration-200 active:scale-90">
+                  <ArrowIcon />
                 </button>
               </motion.div>
             )}
+
+            {mode === "transcribing" && (
+              <motion.div key="transcribing" {...morphProps} className={`${PILL_INNER} justify-center`}>
+                <span className="animate-pulse font-body text-sm text-sage">Transcribing...</span>
+              </motion.div>
+            )}
+
+            {mode === "chat" && (
+              <motion.form key="chat" {...morphProps} onSubmit={handleChatSubmit} className={`${PILL_INNER} gap-3`}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder={voiceError ? "Mic unavailable — type instead" : "Ask anything..."}
+                  className="flex-1 bg-transparent font-body text-sm text-ink outline-none placeholder:text-ink-light/40"
+                />
+                <AnimatePresence mode="wait" initial={false}>
+                  {chatInput.trim() ? (
+                    <motion.button key="send" type="submit" disabled={isStreaming} {...iconMorphProps(-1)} className="rounded-full p-1 disabled:opacity-30">
+                      <ArrowIcon />
+                    </motion.button>
+                  ) : (
+                    <motion.button key="mic" type="button" onClick={handleMicTap} disabled={isStreaming} {...iconMorphProps(1)} className="rounded-full p-1 disabled:opacity-30">
+                      <MicIcon />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </motion.form>
+            )}
+
+            {mode === "idle" && (
+              <motion.div key="idle" {...morphProps} className={`${PILL_INNER} gap-3`}>
+                <button onClick={() => open()} className="flex-1 text-left font-body text-sm text-ink-light/50">
+                  anything...
+                </button>
+                <button onClick={handleMicTap} className="rounded-full p-1">
+                  <MicIcon className="text-ink-light/30" />
+                </button>
+              </motion.div>
+            )}
+
           </AnimatePresence>
         </div>
       </div>
