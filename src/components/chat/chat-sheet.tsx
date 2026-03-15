@@ -26,8 +26,7 @@ export function ChatSheet({ visible }: ChatSheetProps) {
   } = useChatSheet();
   const { user } = usePrivy();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [showSpacer, setShowSpacer] = useState(false);
-  const scrollLockRef = useRef(false);
+  const userScrolledRef = useRef(false);
 
   const name =
     user?.google?.name?.split(" ")[0] ||
@@ -78,46 +77,15 @@ export function ChatSheet({ visible }: ChatSheetProps) {
   const handleSend = useCallback(
     (text: string) => {
       if (!text.trim() || isBusy) return;
-      setShowSpacer(true);
-      scrollLockRef.current = true;
+      userScrolledRef.current = false; // reset on new send
       sendMessage({ text });
+      // Scroll to bottom after send
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      });
     },
     [isBusy, sendMessage],
   );
-
-  // Fix 2: Remove spacer + unlock after streaming completes (or on error)
-  const prevStatusRef = useRef(status);
-  useEffect(() => {
-    const wasActive = prevStatusRef.current === "streaming" || prevStatusRef.current === "submitted";
-
-    if (wasActive && status === "ready") {
-      scrollLockRef.current = false;
-
-      // Scroll to end of actual content FIRST, then remove spacer
-      const el = scrollRef.current;
-      if (el) {
-        const allMsgs = el.querySelectorAll("[data-role]");
-        const lastMsg = allMsgs[allMsgs.length - 1] as HTMLElement | undefined;
-        if (lastMsg) {
-          const bottom = lastMsg.offsetTop + lastMsg.offsetHeight;
-          const target = Math.max(0, bottom - el.clientHeight + 40);
-          el.scrollTo({ top: target, behavior: "smooth" });
-        }
-        // Remove spacer AFTER scroll animation finishes
-        setTimeout(() => setShowSpacer(false), 350);
-      } else {
-        setShowSpacer(false);
-      }
-    }
-
-    // On error, clean up immediately
-    if (wasActive && status === "error") {
-      scrollLockRef.current = false;
-      setShowSpacer(false);
-    }
-
-    prevStatusRef.current = status;
-  }, [status]);
 
   useEffect(() => {
     registerSendMessage(handleSend);
@@ -130,32 +98,31 @@ export function ChatSheet({ visible }: ChatSheetProps) {
     }
   }, [prefill, clearPrefill, setChatInput]);
 
-  // Scroll behavior
+  // Detect manual scroll-up to stop auto-following
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      // If user scrolled away from bottom, stop auto-following
+      if (!isNearBottom && isBusy) {
+        userScrolledRef.current = true;
+      }
+      // If user scrolls back to bottom, resume auto-following
+      if (isNearBottom) {
+        userScrolledRef.current = false;
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [isBusy]);
+
+  // Auto-scroll to bottom when messages change (unless user scrolled up)
   useEffect(() => {
     if (!scrollRef.current || !visible) return;
-
-    if (scrollLockRef.current) {
-      // Fix 6: Smooth scroll user message to top
-      requestAnimationFrame(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const userMsgs = el.querySelectorAll("[data-role='user']");
-        const last = userMsgs[userMsgs.length - 1] as HTMLElement | undefined;
-        if (last) {
-          const containerRect = el.getBoundingClientRect();
-          const msgRect = last.getBoundingClientRect();
-          const newTop = el.scrollTop + (msgRect.top - containerRect.top);
-          el.scrollTo({ top: newTop, behavior: "smooth" });
-        }
-      });
-    } else {
-      // Fix 1: Only auto-scroll if user is near bottom (don't override manual scroll)
-      const el = scrollRef.current;
-      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-      if (isNearBottom) {
-        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-      }
-    }
+    if (userScrolledRef.current) return;
+    const el = scrollRef.current;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, visible]);
 
   return (
@@ -242,6 +209,9 @@ export function ChatSheet({ visible }: ChatSheetProps) {
                   {message.role === "assistant" && !hasText && isBusy && (
                     <ThinkingIndicator />
                   )}
+                  {message.role === "assistant" && !hasText && !isBusy && (
+                    <MessageBubble role="assistant" text="Let me try that again — could you rephrase?" />
+                  )}
                 </div>
               );
             })}
@@ -251,8 +221,6 @@ export function ChatSheet({ visible }: ChatSheetProps) {
                 <ThinkingIndicator />
               </div>
             )}
-            {/* Spacer — only during send+stream, removed after */}
-            {showSpacer && <div style={{ minHeight: "70vh" }} aria-hidden="true" />}
           </div>
         </div>
       </div>
