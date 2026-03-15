@@ -112,14 +112,14 @@ const iconMorphProps = (dir: 1 | -1) => ({
 });
 
 const MicIcon = ({ className = "text-sage" }: { className?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" className={className}>
     <path d="M8 1a2.5 2.5 0 00-2.5 2.5v4a2.5 2.5 0 005 0v-4A2.5 2.5 0 008 1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M12 7.5a4 4 0 01-8 0M8 12.5v2M6.5 14.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
 const ArrowIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-sage">
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" className="text-sage">
     <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
