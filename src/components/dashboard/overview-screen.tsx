@@ -217,6 +217,7 @@ export function OverviewScreen({
   const { open } = useChatSheet();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeCard, setActiveCard] = useState(0);
+  const [flippedCard, setFlippedCard] = useState<number | null>(null);
   const [activityMode, setActivityMode] = useState<"prose" | "list">("prose");
   const [narration, setNarration] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -466,27 +467,41 @@ export function OverviewScreen({
                   animate={{ opacity: activeCard === 0 ? 1 : 0.6 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className={cardBase}>
-                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: emeraldMetal.background, borderColor: emeraldMetal.borderColor }} />
-                    <CardGrain />
-                    <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.04] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
-                    <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
-                      <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
-                        Wallet balance
-                      </p>
-                      <div>
-                        <OdometerNumber
-                          value={displayBalance ?? 0}
-                          format={formatUsd}
-                          className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
-                        />
-                        {data.walletAssets.length > 0 && (
-                          <p className="mt-1.5 font-body text-[11px] text-ink-light/40">
-                            {data.walletAssets.length} {data.walletAssets.length === 1 ? "token" : "tokens"}
-                          </p>
-                        )}
+                  <div className="cursor-pointer" onClick={() => setFlippedCard(flippedCard === 0 ? null : 0)}>
+                    <div className={cardBase}>
+                      <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: emeraldMetal.background, borderColor: emeraldMetal.borderColor }} />
+                      <CardGrain />
+                      <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.03] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
+                      <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
+                        <AnimatePresence mode="wait" initial={false}>
+                          {flippedCard !== 0 ? (
+                            <motion.div key="balance-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
+                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">Wallet balance</p>
+                              <div>
+                                <OdometerNumber value={displayBalance ?? 0} format={formatUsd} className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]" />
+                                {data.walletAssets.length > 0 && (
+                                  <p className="mt-1.5 font-body text-[11px] text-ink-light/40">{data.walletAssets.length} {data.walletAssets.length === 1 ? "token" : "tokens"} · tap to view</p>
+                                )}
+                              </div>
+                              <div />
+                            </motion.div>
+                          ) : (
+                            <motion.div key="balance-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
+                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">Wallet breakdown</p>
+                              <div className="space-y-2">
+                                {data.walletAssets.slice(0, 5).map((a) => (
+                                  <div key={a.symbol} className="flex items-center justify-between">
+                                    <span className="font-body text-sm text-ink">{a.symbol}</span>
+                                    <span className="font-display text-sm text-ink">{parseFloat(a.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })}</span>
+                                  </div>
+                                ))}
+                                {data.walletAssets.length === 0 && <p className="font-body text-sm text-ink-light/50">No tokens yet</p>}
+                              </div>
+                              <p className="font-body text-[11px] text-ink-light/40">tap to flip back</p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                      <div />
                     </div>
                   </div>
                 </motion.div>
@@ -497,33 +512,52 @@ export function OverviewScreen({
                   animate={{ opacity: activeCard === 1 ? 1 : 0.6 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className={cardBase}>
-                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: goldMetal.background, borderColor: goldMetal.borderColor }} />
-                    <CardGrain />
-                    <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.04] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
-                    <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
-                      <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
-                        {data.hasPositions || displayVaultIds.length > 0 ? "Total savings" : "Earn up to"}
-                      </p>
-                      {data.hasPositions || displayVaultIds.length > 0 ? (
-                        <div>
-                          <OdometerNumber
-                            value={displaySavings}
-                            format={formatUsd}
-                            className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
-                          />
-                          {displayVaultIds.length > 0 && (
-                            <p className="mt-1.5 font-body text-[11px] text-ink-light/40">
-                              across {displayVaultIds.length} {displayVaultIds.length === 1 ? "account" : "accounts"}
-                            </p>
+                  <div className="cursor-pointer" onClick={() => setFlippedCard(flippedCard === 1 ? null : 1)}>
+                    <div className={cardBase}>
+                      <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: goldMetal.background, borderColor: goldMetal.borderColor }} />
+                      <CardGrain />
+                      <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.03] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
+                      <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
+                        <AnimatePresence mode="wait" initial={false}>
+                          {flippedCard !== 1 ? (
+                            <motion.div key="savings-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
+                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
+                                {data.hasPositions || displayVaultIds.length > 0 ? "Total savings" : "Earn up to"}
+                              </p>
+                              {data.hasPositions || displayVaultIds.length > 0 ? (
+                                <div>
+                                  <OdometerNumber value={displaySavings} format={formatUsd} className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]" />
+                                  {displayVaultIds.length > 0 && (
+                                    <p className="mt-1.5 font-body text-[11px] text-ink-light/40">across {displayVaultIds.length} {displayVaultIds.length === 1 ? "account" : "accounts"} · tap to view</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="font-display text-[2.5rem] leading-none tracking-tight text-ink/60 sm:text-[3rem]">{bestApy > 0 ? formatApy(String(bestApy)) : "5.0%"}</p>
+                              )}
+                              <div />
+                            </motion.div>
+                          ) : (
+                            <motion.div key="savings-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
+                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">Savings breakdown</p>
+                              <div className="space-y-2">
+                                {data.positions.map((p) => {
+                                  const vName = VAULT_FRIENDLY_NAMES[p.vault.id] || p.vault.name;
+                                  const vApy = formatApy(p.vault.yield?.["7d"]);
+                                  const usd = Number(p.position.assets) / 10 ** p.vault.asset.decimals * (data.prices?.[p.vault.asset.symbol.toLowerCase()] || 1);
+                                  return (
+                                    <div key={p.vault.id} className="flex items-center justify-between">
+                                      <span className="font-body text-sm text-ink">{vName}</span>
+                                      <span className="font-display text-sm text-ink">{formatUsd(usd)} <span className="text-[10px] text-ink-light/50">{vApy}</span></span>
+                                    </div>
+                                  );
+                                })}
+                                {data.positions.length === 0 && <p className="font-body text-sm text-ink-light/50">No savings yet</p>}
+                              </div>
+                              <p className="font-body text-[11px] text-ink-light/40">tap to flip back</p>
+                            </motion.div>
                           )}
-                        </div>
-                      ) : (
-                        <p className="font-display text-[2.5rem] leading-none tracking-tight text-ink/60 sm:text-[3rem]">
-                          {bestApy > 0 ? formatApy(String(bestApy)) : "5.0%"}
-                        </p>
-                      )}
-                      <div />
+                        </AnimatePresence>
+                      </div>
                     </div>
                   </div>
                 </motion.div>

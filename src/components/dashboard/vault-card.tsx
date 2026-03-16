@@ -2,7 +2,7 @@
 
 import type { VaultStatsItem } from "@yo-protocol/core";
 import { formatApy } from "@/lib/format";
-import { VAULT_FRIENDLY_NAMES, VAULT_ACCENTS } from "@/lib/constants";
+import { VAULT_FRIENDLY_NAMES, VAULT_ACCENTS, VAULT_LOGOS } from "@/lib/constants";
 
 interface VaultCardProps {
   vault: VaultStatsItem;
@@ -28,6 +28,16 @@ export function VaultCard({ vault, onTap }: VaultCardProps) {
           : "transparent",
       }}
     >
+      {/* Monochrome embossed token logo */}
+      {VAULT_LOGOS[vault.id] && (
+        <img
+          src={VAULT_LOGOS[vault.id]}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-2 -bottom-2 h-20 w-20 select-none rounded-full"
+          style={{ opacity: 0.06 }}
+        />
+      )}
       {/* Accent bottom line */}
       <div
         className="absolute right-0 bottom-0 left-0 h-[2px]"
