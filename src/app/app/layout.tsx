@@ -207,7 +207,7 @@ function ChatInputBar() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-[60] px-4 pb-[max(env(safe-area-inset-bottom),20px)] pt-3">
       <div className="mx-auto max-w-lg lg:max-w-3xl">
-        <div className="overflow-hidden rounded-full border border-border/60 bg-cream/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] backdrop-blur-xl transition-colors duration-300">
+        <div className="overflow-hidden rounded-full border border-border/60 bg-cream/70 shadow-[0_1px_8px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-colors duration-300">
           <AnimatePresence mode="wait" initial={false}>
 
             {mode === "action" && activeSheet && (

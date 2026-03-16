@@ -23,16 +23,6 @@ interface OverviewScreenProps {
   onRefresh?: () => Promise<void>;
 }
 
-/* ── Time-aware greeting ──────────────────────────────────── */
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h >= 5 && h < 12) return "Good morning";
-  if (h >= 12 && h < 17) return "Good afternoon";
-  if (h >= 17 && h < 21) return "Good evening";
-  return "Hey";
-}
-
 /* ── Daily hash for rotating content ─────────────────────── */
 
 function hashOfDay(): number {
@@ -42,30 +32,76 @@ function hashOfDay(): number {
   return Math.abs(h);
 }
 
-/* ── Closing line ────────────────────────────────────────── */
+/* ── Rich greeting with varied emojis ────────────────────── */
 
-function getCloser(hasPositions: boolean, apy: number, totalSavings: number): string {
+const GREETINGS: Record<string, [string, string][]> = {
+  morning: [["Rise and shine", "☀️"], ["Good morning", "👋"], ["Morning", "🌅"]],
+  afternoon: [["Good afternoon", "👋"], ["Hey there", "✨"], ["Afternoon", "🌤️"]],
+  evening: [["Good evening", "🌙"], ["Evening", "👋"], ["Welcome back", "✨"]],
+  night: [["Late night savings?", "🦉"], ["Still going", "🌙"], ["Hey", "👋"]],
+};
+const DAY_OVERRIDES: Record<number, [string, string][]> = {
+  1: [["Start the week right", "💪"]], // Monday
+  5: [["Happy Friday", "🎉"]],        // Friday
+};
+const EMOJI_ANIMS: Record<string, string> = {
+  "👋": "animate-[wave-loop_8s_ease-in-out_infinite]",
+  "☀️": "animate-[spin_12s_linear_infinite]",
+  "✨": "animate-[pulse_2s_ease-in-out_infinite]",
+  "🌅": "animate-[pulse_3s_ease-in-out_infinite]",
+  "🌤️": "animate-[pulse_3s_ease-in-out_infinite]",
+  "🌙": "animate-[pulse_4s_ease-in-out_infinite]",
+  "🦉": "animate-[bounce_2s_ease-in-out_infinite]",
+  "🎉": "animate-[bounce_1.5s_ease-in-out_infinite]",
+  "💪": "animate-[pulse_2s_ease-in-out_infinite]",
+};
+
+function getGreeting(): { text: string; emoji: string; anim: string } {
+  const now = new Date();
+  const h = now.getHours();
+  const day = now.getDay();
+  const hash = hashOfDay();
+
+  // Day override (20% chance)
+  if (DAY_OVERRIDES[day] && hash % 5 === 0) {
+    const opts = DAY_OVERRIDES[day];
+    const [text, emoji] = opts[hash % opts.length];
+    return { text, emoji, anim: EMOJI_ANIMS[emoji] || "" };
+  }
+
+  const period = h >= 5 && h < 12 ? "morning" : h >= 12 && h < 17 ? "afternoon" : h >= 17 && h < 22 ? "evening" : "night";
+  const opts = GREETINGS[period];
+  const [text, emoji] = opts[hash % opts.length];
+  return { text, emoji, anim: EMOJI_ANIMS[emoji] || "" };
+}
+
+/* ── Editorial prose ─────────────────────────────────────── */
+
+function getProse(hasPositions: boolean, apy: number, totalSavings: number, walletBalance: number): string {
+  const hash = hashOfDay();
   if (hasPositions && apy > 0) {
     const daily = formatUsd((totalSavings * apy) / 100 / 365);
     const mult = Math.round(apy / 0.5);
-    const doubling = Math.round(72 / apy);
-    const templates = [
-      `That\u2019s roughly ${daily} every day \u2014 while you sleep.`,
-      `That\u2019s ${mult}x what a typical savings account pays.`,
-      `At this rate, your money doubles in ~${doubling} years.`,
-      `Your money hasn\u2019t taken a single day off.`,
+    const lines = [
+      `Your money is earning ${formatApy(String(apy))} annually \u2014 that\u2019s roughly ${daily} every day while you sleep.`,
+      `Your savings are growing at ${formatApy(String(apy))}. Not bad for doing nothing.`,
+      `Earning ${formatApy(String(apy))} on your savings. Zero fees, zero effort. That\u2019s ${mult}x a typical savings account.`,
     ];
-    return templates[hashOfDay() % templates.length];
+    return lines[hash % lines.length];
   }
-
-  const mult = apy > 0 ? Math.round(apy / 0.5) : 10;
-  const templates = [
-    `That\u2019s ${mult}x more than the average savings account.`,
-    `Your money could be earning while you sleep.`,
-    `Same money, better returns. No lock-ups, no fees.`,
-    `Most people leave their money sitting idle.`,
+  if (walletBalance > 0) {
+    const lines = [
+      `You\u2019ve got ${formatUsd(walletBalance)} sitting idle. It could be earning up to ${apy > 0 ? formatApy(String(apy)) : "5.0%"}.`,
+      `Most people leave their money sitting still. You don\u2019t have to.`,
+      `Same money, better returns. No lock-ups, no fees.`,
+    ];
+    return lines[hash % lines.length];
+  }
+  const lines = [
+    "This is where your savings story begins.",
+    "Ready to start earning? It only takes a few seconds.",
   ];
-  return templates[hashOfDay() % templates.length];
+  return lines[hash % lines.length];
 }
 
 /* ── Vault display labels ────────────────────────────────── */
@@ -79,39 +115,20 @@ const VAULT_SHORT: Record<string, string> = {
   yoUSDT: "USDT",
 };
 
-/* ── Animations ──────────────────────────────────────────── */
+/* ── Staggered cascade animations ─────────────────────────── */
 
 const ease = [0.16, 1, 0.3, 1] as const;
-
-const greetReveal = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  transition: { duration: 0.8, ease },
-};
-
-const deckReveal = {
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.8, delay: 0.2, ease },
-};
-
-const proseReveal = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.7, delay: 0.4, ease },
-};
-
-const sectionReveal = (i: number) => ({
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.7, delay: 0.6 + i * 0.1, ease },
+const cascade = (delay: number) => ({
+  initial: { opacity: 0, y: 24 } as const,
+  animate: { opacity: 1, y: 0 } as const,
+  transition: { duration: 0.6, delay: delay / 1000, ease },
 });
 
-const chipsReveal = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.7, delay: 0.8, ease },
-};
+const greetReveal = cascade(0);
+const deckReveal = cascade(150);
+const proseReveal = cascade(350);
+const sectionReveal = (i: number) => cascade(500 + i * 150);
+const chipsReveal = cascade(950);
 
 /* ── Narration text highlighting ──────────────────────────── */
 
@@ -282,10 +299,17 @@ export function OverviewScreen({
       }, 0)
     : 0;
 
-  const closer = useMemo(
-    () => getCloser(data.hasPositions || (data.cache?.positionVaultIds?.length ?? 0) > 0, bestApy, data.totalSavingsUsd || data.cache?.totalSavingsUsd || 0),
-    [data.hasPositions, data.cache, bestApy, data.totalSavingsUsd],
+  const prose = useMemo(
+    () => getProse(
+      data.hasPositions || (data.cache?.positionVaultIds?.length ?? 0) > 0,
+      bestApy,
+      data.totalSavingsUsd || data.cache?.totalSavingsUsd || 0,
+      data.walletBalanceUsd || 0,
+    ),
+    [data.hasPositions, data.cache, bestApy, data.totalSavingsUsd, data.walletBalanceUsd],
   );
+
+  const greeting = useMemo(() => getGreeting(), []);
 
   const availableVaultIds = useMemo(
     () => [...new Set(data.baseVaults.map((v) => v.id))],
@@ -323,8 +347,8 @@ export function OverviewScreen({
   const cardBase =
     "relative overflow-hidden rounded-[2rem] bg-cream shadow-[0_2px_24px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.03)]";
 
-  // Liquid metal — jade emerald (savings) + gold (balance), premium credit card aesthetic
-  const savingsMetal = {
+  // Liquid metal — emerald (balance card) + gold (savings card)
+  const emeraldMetal = {
     background: [
       "radial-gradient(ellipse at 20% 10%, rgba(180,220,190,0.35) 0%, transparent 40%)",
       "radial-gradient(ellipse at 80% 90%, rgba(30,70,40,0.4) 0%, transparent 45%)",
@@ -335,7 +359,7 @@ export function OverviewScreen({
     borderColor: "rgba(80,140,90,0.3)",
   };
 
-  const balanceMetal = {
+  const goldMetal = {
     background: [
       "radial-gradient(ellipse at 80% 10%, rgba(255,240,200,0.4) 0%, transparent 40%)",
       "radial-gradient(ellipse at 20% 90%, rgba(120,90,30,0.35) 0%, transparent 45%)",
@@ -407,9 +431,9 @@ export function OverviewScreen({
               {...greetReveal}
               className="font-display text-[2rem] leading-snug text-ink sm:text-[2.5rem]"
             >
-              {getGreeting()}, {name}{" "}
-              <span className="inline-block origin-[70%_70%] animate-[wave-loop_8s_ease-in-out_infinite]">
-                👋
+              {greeting.text}, {name}{" "}
+              <span className={`inline-block origin-[70%_70%] ${greeting.anim}`}>
+                {greeting.emoji}
               </span>
             </motion.h1>
           </div>
@@ -421,7 +445,7 @@ export function OverviewScreen({
             <div className="px-6 sm:px-10">
               <div className="mx-auto max-w-lg">
                 <div className={cardBase}>
-                  <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: savingsMetal.background, borderColor: savingsMetal.borderColor }} />
+                  <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: emeraldMetal.background, borderColor: emeraldMetal.borderColor }} />
                   <div className="relative aspect-[1.6/1] p-7">
                     <div className="h-4 w-20 animate-pulse rounded bg-ink/[0.06]" />
                     <div className="mt-6 h-10 w-32 animate-pulse rounded bg-ink/[0.08]" />
@@ -436,15 +460,47 @@ export function OverviewScreen({
                 onScroll={handleScroll}
                 className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 sm:px-10"
               >
-                {/* ── Savings card ────────────────────────── */}
+                {/* ── Balance card (emerald, first) ──────── */}
                 <motion.div
                   className="w-full flex-none snap-center"
                   animate={{ opacity: activeCard === 0 ? 1 : 0.6 }}
                   transition={{ duration: 0.3 }}
                 >
                   <div className={cardBase}>
-                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: savingsMetal.background, borderColor: savingsMetal.borderColor }} />
+                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: emeraldMetal.background, borderColor: emeraldMetal.borderColor }} />
                     <CardGrain />
+                    <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.04] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
+                    <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
+                      <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
+                        Wallet balance
+                      </p>
+                      <div>
+                        <OdometerNumber
+                          value={displayBalance ?? 0}
+                          format={formatUsd}
+                          className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
+                        />
+                        {data.walletAssets.length > 0 && (
+                          <p className="mt-1.5 font-body text-[11px] text-ink-light/40">
+                            {data.walletAssets.length} {data.walletAssets.length === 1 ? "token" : "tokens"}
+                          </p>
+                        )}
+                      </div>
+                      <div />
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* ── Savings card (gold, second) ──────── */}
+                <motion.div
+                  className="w-full flex-none snap-center"
+                  animate={{ opacity: activeCard === 1 ? 1 : 0.6 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className={cardBase}>
+                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: goldMetal.background, borderColor: goldMetal.borderColor }} />
+                    <CardGrain />
+                    <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.04] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
                     <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
                       <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
                         {data.hasPositions || displayVaultIds.length > 0 ? "Total savings" : "Earn up to"}
@@ -463,44 +519,10 @@ export function OverviewScreen({
                           )}
                         </div>
                       ) : (
-                        <p className="font-display text-[2.5rem] leading-none tracking-tight text-sage sm:text-[3rem]">
+                        <p className="font-display text-[2.5rem] leading-none tracking-tight text-ink/60 sm:text-[3rem]">
                           {bestApy > 0 ? formatApy(String(bestApy)) : "5.0%"}
                         </p>
                       )}
-                      <div />
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* ── Balance card ────────────────────────── */}
-                <motion.div
-                  className="w-full flex-none snap-center"
-                  animate={{ opacity: activeCard === 1 ? 1 : 0.6 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className={cardBase}>
-                    <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: balanceMetal.background, borderColor: balanceMetal.borderColor }} />
-                    <CardGrain />
-                    <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
-                      <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
-                        Wallet balance
-                      </p>
-                      <div>
-                        <OdometerNumber
-                          value={displayBalance ?? 0}
-                          format={formatUsd}
-                          className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]"
-                        />
-                        {data.walletAssets.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
-                            {data.walletAssets.slice(0, 4).map((a) => (
-                              <span key={a.symbol} className="font-body text-[11px] text-ink-light/40">
-                                {parseFloat(a.balance).toLocaleString("en-US", { maximumFractionDigits: 4 })} {a.symbol}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
                       <div />
                     </div>
                   </div>
@@ -522,28 +544,15 @@ export function OverviewScreen({
           )}
         </motion.div>
 
-        {/* ── Editorial prose (APY + closer) ──────────────── */}
+        {/* ── Editorial prose ────────────────────────────── */}
         <div className="px-6 sm:px-10">
           <div className="mx-auto w-full max-w-lg">
-            {hasData && data.hasPositions && (
+            {hasData && (
               <motion.p
                 {...proseReveal}
                 className="mt-6 font-body text-[1.25rem] leading-relaxed text-ink sm:text-[1.4rem]"
               >
-                Your money is earning{" "}
-                <span className="underline decoration-sage/40 decoration-[1.5px] underline-offset-4">
-                  {formatApy(String(bestApy))}
-                </span>
-                {" "}annually. {closer}
-              </motion.p>
-            )}
-
-            {hasData && !data.hasPositions && (
-              <motion.p
-                {...proseReveal}
-                className="mt-6 font-body text-[1.25rem] leading-relaxed text-ink sm:text-[1.4rem]"
-              >
-                {closer}
+                {prose}
               </motion.p>
             )}
 

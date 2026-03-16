@@ -2,7 +2,7 @@
 
 import type { VaultStatsItem } from "@yo-protocol/core";
 import { formatApy } from "@/lib/format";
-import { VAULT_FRIENDLY_NAMES, VAULT_ACCENTS, VAULT_LOGOS } from "@/lib/constants";
+import { VAULT_FRIENDLY_NAMES, VAULT_ACCENTS } from "@/lib/constants";
 
 interface VaultCardProps {
   vault: VaultStatsItem;
@@ -17,34 +17,30 @@ export function VaultCard({ vault, onTap }: VaultCardProps) {
     ? parseFloat(vault.merklRewardYield)
     : 0;
 
-  const logo = VAULT_LOGOS[vault.id];
-
   return (
     <button
       onClick={() => onTap(vault)}
-      className="group relative min-w-[150px] flex-none overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 hover:shadow-[0_2px_16px_rgba(0,0,0,0.06)] lg:min-w-0"
+      className="group relative min-w-[150px] flex-none overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] lg:min-w-0"
       style={{
         borderColor: accent?.border || "var(--color-border)",
-        backgroundColor: accent?.bg || "transparent",
+        background: accent
+          ? `linear-gradient(to bottom, ${accent.bg}, rgba(255,254,242,0.6))`
+          : "transparent",
       }}
     >
-      {/* Token logo watermark */}
-      {logo && (
-        <img
-          src={logo}
-          alt=""
-          className="pointer-events-none absolute -right-3 -bottom-3 h-24 w-24 select-none rounded-full opacity-[0.07]"
-          aria-hidden="true"
-        />
-      )}
-      <span className="relative label-mono text-[10px]">{name}</span>
+      {/* Accent bottom line */}
+      <div
+        className="absolute right-0 bottom-0 left-0 h-[2px]"
+        style={{ backgroundColor: accent?.color || "var(--color-sage)", opacity: 0.2 }}
+      />
+      <span className="relative font-body text-[10px] tracking-[0.02em] text-ink-light">{name}</span>
       <p
-        className="relative mt-2 font-display text-3xl"
+        className="relative mt-2 font-display text-2xl"
         style={{ color: accent?.color || "var(--color-sage)" }}
       >
         {apy}
       </p>
-      <p className="relative mt-1 font-body text-[10px] text-ink-light">
+      <p className="relative mt-1 font-body text-[10px] text-ink-light/60">
         {vault.asset.symbol}
       </p>
       {bonus > 0 && (
