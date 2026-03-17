@@ -114,6 +114,17 @@ body::before {
   opacity: 0.4;
 }
 
+/* ─── Sun shimmer — glows briefly then idles, like wave-loop ─── */
+
+@keyframes sun-loop {
+  0%   { transform: rotate(0deg) scale(1); }
+  5%   { transform: rotate(20deg) scale(1.06); }
+  10%  { transform: rotate(-12deg) scale(1.04); }
+  16%  { transform: rotate(15deg) scale(1.05); }
+  22%  { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
 /* ─── Looping wave — waves ~2s then idles ~6s, repeats forever ─── */
 
 @keyframes wave-loop {

@@ -8,62 +8,73 @@ interface GoalCardProps {
   goal: { name: string; targetUsd: number };
   vault: VaultStatsItem;
   onTap: (vault: VaultStatsItem) => void;
+  onRemoveGoal?: () => void;
 }
 
-export function GoalCard({ goal, vault, onTap }: GoalCardProps) {
+export function GoalCard({ goal, vault, onTap, onRemoveGoal }: GoalCardProps) {
   const name = VAULT_FRIENDLY_NAMES[vault.id] || vault.name;
   const apy = formatApy(vault.yield?.["7d"]);
   const accent = VAULT_ACCENTS[vault.id];
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onTap(vault)}
-      className="w-full overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTap(vault); }}
+      className="w-full cursor-pointer overflow-hidden rounded-xl border p-5 text-left transition-[transform,box-shadow] duration-200 active:scale-[0.99]"
       style={{
         borderColor: accent?.border || "var(--color-border)",
         background: accent
-          ? `linear-gradient(to bottom, ${accent.bg}, rgba(255,254,242,0.4))`
+          ? `linear-gradient(160deg, ${accent.bg} 0%, rgba(255,254,242,0.3) 100%)`
           : "transparent",
       }}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="font-body text-[10px] tracking-[0.02em] text-ink-light">{name}</span>
-          <p className="mt-1 font-display text-xl text-ink">{goal.name}</p>
+      {/* Header row */}
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <span className="font-display italic text-[11px] text-ink-light/50">{name}</span>
+          <p className="mt-1 font-display text-2xl leading-tight text-ink">{goal.name}</p>
         </div>
         <span
-          className="inline-block rounded-md px-2 py-0.5 font-body text-[10px]"
-          style={{
-            backgroundColor: accent?.bg || "rgba(143,174,130,0.1)",
-            color: accent?.color || "var(--color-sage)",
-          }}
+          className="mt-0.5 flex-none font-display italic text-base leading-none"
+          style={{ color: accent?.color || "var(--color-sage)" }}
         >
           {apy}
         </span>
+        {onRemoveGoal && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemoveGoal(); }}
+            className="mt-0.5 flex-none p-1 text-ink-light/30 transition-colors duration-150 hover:text-ink-light/60"
+            aria-label="Remove goal"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* Progress bar — empty but visible as a sliver */}
-      <div className="mt-3 h-1.5 rounded-full bg-border/50">
+      {/* Progress track */}
+      <div className="mt-4 h-px w-full rounded-full bg-ink/[0.08]">
         <div
-          className="h-full min-w-[3px] rounded-full transition-all duration-500"
+          className="h-full min-w-[2px] rounded-full"
           style={{ width: "0%", backgroundColor: accent?.color || "var(--color-sage)" }}
         />
       </div>
 
-      <div className="mt-1.5 flex items-center justify-between">
+      {/* Footer */}
+      <div className="mt-2.5 flex items-center justify-between">
         <span
-          className="rounded-full px-2 py-0.5 font-body text-[10px]"
-          style={{
-            backgroundColor: accent?.bg || "rgba(143,174,130,0.1)",
-            color: accent?.color || "var(--color-sage)",
-          }}
+          className="font-body text-[11px]"
+          style={{ color: accent?.color || "var(--color-sage)", opacity: 0.8 }}
         >
           Start saving
         </span>
-        <span className="font-body text-[10px] text-ink-light/60">
+        <span className="font-mono text-[11px] tabular-nums text-ink-light/50">
           $0 / {formatUsd(goal.targetUsd)}
         </span>
       </div>
-    </button>
+    </div>
   );
 }

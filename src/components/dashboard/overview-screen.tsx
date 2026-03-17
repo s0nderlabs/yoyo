@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { VaultStatsItem } from "@yo-protocol/core";
 import type { DashboardData } from "@/hooks/use-dashboard-data";
 import { useChatSheet } from "@/contexts/chat-context";
+import { useAppGoals } from "@/contexts/goals-context";
 import { formatUsd, formatApy } from "@/lib/format";
 import { VAULT_LOGOS, VAULT_FRIENDLY_NAMES, TOKEN_LOGOS, NARRATION_CACHE_KEY } from "@/lib/constants";
 import { OdometerNumber } from "@/components/ui/odometer-number";
@@ -13,6 +14,7 @@ import { PositionCard } from "./position-card";
 import { GoalCard } from "./goal-card";
 import { VaultCard } from "./vault-card";
 import { ActivityList, type ActivityItem } from "./activity-list";
+import { AddGoalSheet } from "./add-goal-sheet";
 
 interface OverviewScreenProps {
   data: DashboardData;
@@ -35,7 +37,7 @@ function hashOfDay(): number {
 /* ── Rich greeting with varied emojis ────────────────────── */
 
 const GREETINGS: Record<string, [string, string][]> = {
-  morning: [["Rise and shine", "☀️"], ["Good morning", "👋"], ["Morning", "🌅"]],
+  morning: [["Rise and shine", "☀️"], ["Good morning", "👋"], ["Morning", "☀️"]],
   afternoon: [["Good afternoon", "👋"], ["Hey there", "✨"], ["Afternoon", "🌤️"]],
   evening: [["Good evening", "🌙"], ["Evening", "👋"], ["Welcome back", "✨"]],
   night: [["Late night savings?", "🦉"], ["Still going", "🌙"], ["Hey", "👋"]],
@@ -45,15 +47,14 @@ const DAY_OVERRIDES: Record<number, [string, string][]> = {
   5: [["Happy Friday", "🎉"]],        // Friday
 };
 const EMOJI_ANIMS: Record<string, string> = {
-  "👋": "animate-[wave-loop_8s_ease-in-out_infinite]",
-  "☀️": "animate-[spin_12s_linear_infinite]",
-  "✨": "animate-[pulse_2s_ease-in-out_infinite]",
-  "🌅": "animate-[pulse_3s_ease-in-out_infinite]",
-  "🌤️": "animate-[pulse_3s_ease-in-out_infinite]",
-  "🌙": "animate-[pulse_4s_ease-in-out_infinite]",
-  "🦉": "animate-[bounce_2s_ease-in-out_infinite]",
-  "🎉": "animate-[bounce_1.5s_ease-in-out_infinite]",
-  "💪": "animate-[pulse_2s_ease-in-out_infinite]",
+  "👋": "origin-[70%_70%] animate-[wave-loop_8s_ease-in-out_infinite]",
+  "☀️": "origin-center animate-[sun-loop_9s_ease-in-out_infinite]",
+  "✨": "origin-center animate-[pulse_2s_ease-in-out_infinite]",
+  "🌤️": "origin-center animate-[pulse_3s_ease-in-out_infinite]",
+  "🌙": "origin-center animate-[pulse_4s_ease-in-out_infinite]",
+  "🦉": "origin-center animate-[bounce_2s_ease-in-out_infinite]",
+  "🎉": "origin-center animate-[bounce_1.5s_ease-in-out_infinite]",
+  "💪": "origin-center animate-[pulse_2s_ease-in-out_infinite]",
 };
 
 function getGreeting(): { text: string; emoji: string; anim: string } {
@@ -125,10 +126,10 @@ const cascade = (delay: number) => ({
 });
 
 const greetReveal = cascade(0);
-const deckReveal = cascade(150);
-const proseReveal = cascade(350);
-const sectionReveal = (i: number) => cascade(500 + i * 150);
-const chipsReveal = cascade(950);
+const deckReveal = cascade(80);
+const proseReveal = cascade(180);
+const sectionReveal = (i: number) => cascade(280 + i * 100);
+const chipsReveal = cascade(550);
 
 /* ── Narration text highlighting ──────────────────────────── */
 
@@ -215,9 +216,16 @@ export function OverviewScreen({
 }: OverviewScreenProps) {
   const { user } = usePrivy();
   const { open } = useChatSheet();
+  const { refetch: refetchGoals } = useAppGoals();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeCard, setActiveCard] = useState(0);
   const [flippedCard, setFlippedCard] = useState<number | null>(null);
+  const [addGoalVault, setAddGoalVault] = useState<VaultStatsItem | null>(null);
+
+  const handleRemoveGoal = useCallback(async (vaultId: string) => {
+    await fetch(`/api/goals?vaultId=${encodeURIComponent(vaultId)}`, { method: "DELETE" });
+    await refetchGoals();
+  }, [refetchGoals]);
   const [activityMode, setActivityMode] = useState<"prose" | "list">("prose");
   const [narration, setNarration] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -293,12 +301,15 @@ export function OverviewScreen({
     (user?.apple as { firstName?: string } | undefined)?.firstName ||
     "there";
 
-  const bestApy = data.baseVaults.length
-    ? data.baseVaults.reduce((best, v) => {
-        const apy = parseFloat(v.yield?.["7d"] || "0");
-        return apy > best ? apy : best;
-      }, 0)
-    : 0;
+  const bestApy = useMemo(
+    () => data.baseVaults.length
+      ? data.baseVaults.reduce((best, v) => {
+          const apy = parseFloat(v.yield?.["7d"] || "0");
+          return apy > best ? apy : best;
+        }, 0)
+      : 0,
+    [data.baseVaults],
+  );
 
   const prose = useMemo(
     () => getProse(
@@ -346,7 +357,7 @@ export function OverviewScreen({
   }, []);
 
   const cardBase =
-    "relative overflow-hidden rounded-[2rem] bg-cream shadow-[0_2px_24px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.03)]";
+    "relative overflow-hidden rounded-[2rem] bg-cream shadow-[0_4px_32px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.04),0_0_0_1px_rgba(0,0,0,0.03)]";
 
   // Liquid metal — emerald (balance card) + gold (savings card)
   const emeraldMetal = {
@@ -372,6 +383,7 @@ export function OverviewScreen({
   };
 
   return (
+    <>
     <div
       className="relative min-h-dvh"
       onTouchStart={handleTouchStart}
@@ -433,7 +445,7 @@ export function OverviewScreen({
               className="font-display text-[2rem] leading-snug text-ink sm:text-[2.5rem]"
             >
               {greeting.text}, {name}{" "}
-              <span className={`inline-block origin-[70%_70%] ${greeting.anim}`}>
+              <span className={`inline-block ${greeting.anim}`}>
                 {greeting.emoji}
               </span>
             </motion.h1>
@@ -442,7 +454,9 @@ export function OverviewScreen({
 
         {/* ── Card carousel ──────────────────────────────── */}
         <motion.div {...deckReveal} className="mt-8">
+          <AnimatePresence mode="wait">
           {displaySavings === null ? (
+            <motion.div key="card-skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
             <div className="px-6 sm:px-10">
               <div className="mx-auto max-w-lg">
                 <div className={cardBase}>
@@ -454,8 +468,9 @@ export function OverviewScreen({
                 </div>
               </div>
             </div>
+            </motion.div>
           ) : (
-            <>
+            <motion.div key="card-real" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
               <div
                 ref={scrollRef}
                 onScroll={handleScroll}
@@ -471,33 +486,31 @@ export function OverviewScreen({
                     <div className={cardBase}>
                       <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: emeraldMetal.background, borderColor: emeraldMetal.borderColor }} />
                       <CardGrain />
-                      <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.03] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
-                      <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
+                      <span className="pointer-events-none absolute right-5 bottom-5 font-display text-[3rem] leading-none text-ink/[0.04] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
+                      <div className="relative flex aspect-[1.6/1] flex-col p-6">
                         <AnimatePresence mode="wait" initial={false}>
                           {flippedCard !== 0 ? (
-                            <motion.div key="balance-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
-                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">Wallet balance</p>
-                              <div>
-                                <OdometerNumber value={displayBalance ?? 0} format={formatUsd} className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]" />
-                                {data.walletAssets.length > 0 && (
-                                  <p className="mt-1.5 font-body text-[11px] text-ink-light/40">{data.walletAssets.length} {data.walletAssets.length === 1 ? "token" : "tokens"} · tap to view</p>
-                                )}
+                            <motion.div key="balance-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col">
+                              <p className="font-display italic text-[13px] text-ink/60">Wallet balance</p>
+                              <div className="mt-auto">
+                                <OdometerNumber value={displayBalance ?? 0} format={formatUsd} className="font-display text-[2.8rem] leading-none tracking-tight text-ink sm:text-[3.2rem]" />
+                                <p className="mt-1.5 font-body text-[10px] text-ink/60 transition-[opacity] duration-300" style={{ opacity: data.walletAssets.length > 0 ? 1 : 0 }}>
+                                  {data.walletAssets.length > 0 ? `${data.walletAssets.length} ${data.walletAssets.length === 1 ? "asset" : "assets"} · tap to see breakdown` : "\u00a0"}
+                                </p>
                               </div>
-                              <div />
                             </motion.div>
                           ) : (
-                            <motion.div key="balance-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
-                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">Wallet breakdown</p>
-                              <div className="space-y-2">
-                                {data.walletAssets.slice(0, 5).map((a) => (
-                                  <div key={a.symbol} className="flex items-center justify-between">
-                                    <span className="font-body text-sm text-ink">{a.symbol}</span>
-                                    <span className="font-display text-sm text-ink">{parseFloat(a.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })}</span>
+                            <motion.div key="balance-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col">
+                              <p className="font-display italic text-[13px] text-ink/60">Breakdown</p>
+                              <div className="mt-auto divide-y divide-ink/[0.07]">
+                                {data.walletAssets.slice(0, 4).map((a) => (
+                                  <div key={a.symbol} className="flex items-baseline justify-between py-1.5">
+                                    <span className="font-body text-[13px] text-ink">{a.symbol}</span>
+                                    <span className="font-mono text-[12px] tabular-nums text-ink/70">{parseFloat(a.balance).toLocaleString("en-US", { maximumFractionDigits: 4 })}</span>
                                   </div>
                                 ))}
-                                {data.walletAssets.length === 0 && <p className="font-body text-sm text-ink-light/50">No tokens yet</p>}
+                                {data.walletAssets.length === 0 && <p className="font-body text-sm text-ink-light/40 py-1.5">No assets yet</p>}
                               </div>
-                              <p className="font-body text-[11px] text-ink-light/40">tap to flip back</p>
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -516,44 +529,44 @@ export function OverviewScreen({
                     <div className={cardBase}>
                       <div className="pointer-events-none absolute inset-0 rounded-[inherit] border" style={{ background: goldMetal.background, borderColor: goldMetal.borderColor }} />
                       <CardGrain />
-                      <span className="pointer-events-none absolute right-6 bottom-4 font-display text-[2.5rem] leading-none text-ink/[0.03] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
-                      <div className="relative flex aspect-[1.6/1] flex-col justify-between p-7">
+                      <span className="pointer-events-none absolute right-5 bottom-5 font-display text-[3rem] leading-none text-ink/[0.04] select-none" style={{ transform: "rotate(-8deg)" }}>yoyo</span>
+                      <div className="relative flex aspect-[1.6/1] flex-col p-6">
                         <AnimatePresence mode="wait" initial={false}>
                           {flippedCard !== 1 ? (
-                            <motion.div key="savings-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
-                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">
+                            <motion.div key="savings-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col">
+                              <p className="font-display italic text-[13px] text-ink/60">
                                 {data.hasPositions || displayVaultIds.length > 0 ? "Total savings" : "Earn up to"}
                               </p>
-                              {data.hasPositions || displayVaultIds.length > 0 ? (
-                                <div>
-                                  <OdometerNumber value={displaySavings} format={formatUsd} className="font-display text-[2.5rem] leading-none tracking-tight text-ink sm:text-[3rem]" />
-                                  {displayVaultIds.length > 0 && (
-                                    <p className="mt-1.5 font-body text-[11px] text-ink-light/40">across {displayVaultIds.length} {displayVaultIds.length === 1 ? "account" : "accounts"} · tap to view</p>
-                                  )}
-                                </div>
-                              ) : (
-                                <p className="font-display text-[2.5rem] leading-none tracking-tight text-ink/60 sm:text-[3rem]">{bestApy > 0 ? formatApy(String(bestApy)) : "5.0%"}</p>
-                              )}
-                              <div />
+                              <div className="mt-auto">
+                                {data.hasPositions || displayVaultIds.length > 0 ? (
+                                  <>
+                                    <OdometerNumber value={displaySavings} format={formatUsd} className="font-display text-[2.8rem] leading-none tracking-tight text-ink sm:text-[3.2rem]" />
+                                    <p className="mt-1.5 font-body text-[10px] text-ink/60 transition-[opacity] duration-300" style={{ opacity: displayVaultIds.length > 0 ? 1 : 0 }}>
+                                      {displayVaultIds.length > 0 ? `across ${displayVaultIds.length} ${displayVaultIds.length === 1 ? "vault" : "vaults"} · tap to see breakdown` : "\u00a0"}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p className="font-display text-[2.8rem] leading-none tracking-tight text-ink/60 sm:text-[3.2rem]">{bestApy > 0 ? formatApy(String(bestApy)) : "5.0%"}</p>
+                                )}
+                              </div>
                             </motion.div>
                           ) : (
-                            <motion.div key="savings-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col justify-between">
-                              <p className="font-body text-[11px] tracking-[0.04em] text-ink-light/50">Savings breakdown</p>
-                              <div className="space-y-2">
+                            <motion.div key="savings-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col">
+                              <p className="font-display italic text-[13px] text-ink/60">Breakdown</p>
+                              <div className="mt-auto divide-y divide-ink/[0.07]">
                                 {data.positions.map((p) => {
                                   const vName = VAULT_FRIENDLY_NAMES[p.vault.id] || p.vault.name;
                                   const vApy = formatApy(p.vault.yield?.["7d"]);
                                   const usd = Number(p.position.assets) / 10 ** p.vault.asset.decimals * (data.prices?.[p.vault.asset.symbol.toLowerCase()] || 1);
                                   return (
-                                    <div key={p.vault.id} className="flex items-center justify-between">
-                                      <span className="font-body text-sm text-ink">{vName}</span>
-                                      <span className="font-display text-sm text-ink">{formatUsd(usd)} <span className="text-[10px] text-ink-light/50">{vApy}</span></span>
+                                    <div key={p.vault.id} className="flex items-baseline justify-between py-1.5">
+                                      <span className="font-body text-[13px] text-ink">{vName}</span>
+                                      <span className="font-mono text-[11px] tabular-nums text-ink/70">{formatUsd(usd)} <span className="text-ink-light/50">{vApy}</span></span>
                                     </div>
                                   );
                                 })}
-                                {data.positions.length === 0 && <p className="font-body text-sm text-ink-light/50">No savings yet</p>}
+                                {data.positions.length === 0 && <p className="font-body text-sm text-ink-light/40 py-1.5">No savings yet</p>}
                               </div>
-                              <p className="font-body text-[11px] text-ink-light/40">tap to flip back</p>
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -563,19 +576,20 @@ export function OverviewScreen({
                 </motion.div>
               </div>
 
-              {/* ── Dot indicators ──────────────────────── */}
-              <div className="mt-4 flex justify-center gap-1.5">
+              {/* ── Pill indicators ──────────────────────── */}
+              <div className="mt-3 flex justify-center gap-1.5">
                 {[0, 1].map((i) => (
                   <span
                     key={i}
-                    className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-                      activeCard === i ? "bg-ink" : "bg-ink/20"
+                    className={`h-1 rounded-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                      activeCard === i ? "w-5 bg-ink" : "w-1.5 bg-ink/20"
                     }`}
                   />
                 ))}
               </div>
-            </>
+            </motion.div>
           )}
+          </AnimatePresence>
         </motion.div>
 
         {/* ── Editorial prose ────────────────────────────── */}
@@ -601,23 +615,38 @@ export function OverviewScreen({
                 <div className="mt-4 space-y-3">
                   {data.positions.length > 0 || orphanGoals.length > 0 ? (
                     <>
-                      {data.positions.map((p) => (
-                        <PositionCard
+                      {data.positions.map((p, i) => (
+                        <motion.div
                           key={`${p.vault.id}-${p.vault.chain.id}`}
-                          vault={p.vault}
-                          position={p.position}
-                          prices={data.prices}
-                          goal={goals?.[p.vault.id]}
-                          onTap={onPositionTap}
-                        />
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                          <PositionCard
+                            vault={p.vault}
+                            position={p.position}
+                            prices={data.prices}
+                            goal={goals?.[p.vault.id]}
+                            onTap={onPositionTap}
+                            onRemoveGoal={goals?.[p.vault.id] ? () => handleRemoveGoal(p.vault.id) : undefined}
+                            onAddGoal={!goals?.[p.vault.id] ? () => setAddGoalVault(p.vault) : undefined}
+                          />
+                        </motion.div>
                       ))}
-                      {orphanGoals.map((entry) => (
-                        <GoalCard
+                      {orphanGoals.map((entry, i) => (
+                        <motion.div
                           key={`goal-${entry.vaultId}`}
-                          goal={entry.goal}
-                          vault={entry.vault}
-                          onTap={onVaultTap}
-                        />
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: (data.positions.length + i) * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                          <GoalCard
+                            goal={entry.goal}
+                            vault={entry.vault}
+                            onTap={onVaultTap}
+                            onRemoveGoal={() => handleRemoveGoal(entry.vaultId)}
+                          />
+                        </motion.div>
                       ))}
                     </>
                   ) : (
@@ -668,7 +697,7 @@ export function OverviewScreen({
                   </p>
                   <button
                     onClick={() => setActivityMode((m) => (m === "prose" ? "list" : "prose"))}
-                    className="flex-none text-ink-light/35 transition-colors duration-200 hover:text-ink-light"
+                    className="flex-none text-ink/60 transition-colors duration-200 hover:text-ink-light"
                     aria-label={activityMode === "prose" ? "Switch to list view" : "Switch to prose view"}
                   >
                     {activityMode === "prose" ? (
@@ -752,5 +781,15 @@ export function OverviewScreen({
         )}
       </div>
     </div>
+
+    {/* AddGoalSheet portal */}
+    {addGoalVault && (
+      <AddGoalSheet
+        vault={addGoalVault}
+        onClose={() => setAddGoalVault(null)}
+        onSuccess={async () => { await refetchGoals(); setAddGoalVault(null); }}
+      />
+    )}
+    </>
   );
 }

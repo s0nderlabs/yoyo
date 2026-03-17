@@ -2,17 +2,20 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatProvider, useChatSheet } from "@/contexts/chat-context";
+import { GoalsProvider } from "@/contexts/goals-context";
 import { ChatSheet } from "@/components/chat/chat-sheet";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useGoals } from "@/hooks/use-goals";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { VoiceWaveform } from "@/components/chat/voice-waveform";
 import {
   SettingsSidebar,
   ScreenStackWrapper,
 } from "@/components/dashboard/settings-sidebar";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { ready, authenticated } = usePrivy();
@@ -25,23 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [ready, authenticated, router]);
 
   if (!ready || !authenticated) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-cream">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6 }}
-        >
-          <motion.span
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-            className="font-display text-[3.5rem] tracking-tight text-ink"
-          >
-            yoyo
-          </motion.span>
-        </motion.div>
-      </div>
-    );
+    return <LoadingScreen progress={25} />;
   }
 
   return (
@@ -54,6 +41,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 function AppShell({ children }: { children: React.ReactNode }) {
   const { isOpen, sidebarOpen, openSidebar, closeSidebar } = useChatSheet();
   const data = useDashboardData();
+  const { goals: rawGoals, isLoading: goalsLoading, refetch: refetchGoals } = useGoals();
+
+  const goalsMap = useMemo(
+    () => Object.fromEntries(
+      rawGoals.map((g) => [g.vaultId, { name: g.name, targetUsd: parseFloat(g.targetAmount) }])
+    ),
+    [rawGoals],
+  );
+
+  // Overlay pattern: mount app as soon as data is ready, loading screen fades out on top
+  // This eliminates the gap between loading screen disappearing and content appearing
+  const dataReady = !data.vaultsLoading && !goalsLoading;
+  const [appMounted, setAppMounted] = useState(dataReady);
+  const [overlayVisible, setOverlayVisible] = useState(!dataReady);
+  const handleLoadingExit = useCallback(() => setOverlayVisible(false), []);
+
+  // Mount app as soon as data is ready
+  useEffect(() => {
+    if (dataReady && !appMounted) setAppMounted(true);
+  }, [dataReady, appMounted]);
+
+  // Safety valve — never block longer than 6s
+  useEffect(() => {
+    const t = setTimeout(() => { setAppMounted(true); setOverlayVisible(false); }, 6000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const loadingProgress =
+    !data.vaultsLoading && !goalsLoading ? 100 :
+    !data.vaultsLoading ? 70 :
+    !goalsLoading ? 40 :
+    15;
 
   // Lock body scroll when chat sheet or sidebar is open
   useEffect(() => {
@@ -68,32 +87,41 @@ function AppShell({ children }: { children: React.ReactNode }) {
   }, [isOpen, sidebarOpen]);
 
   return (
-    <div className="relative min-h-dvh bg-[#1E1C19]">
-      {/* Sidebar — dark full-screen bg, BEHIND the card */}
-      <SettingsSidebar
-        open={sidebarOpen}
-        onClose={closeSidebar}
-        walletBalanceUsd={data.walletBalanceUsd}
-      />
+    <GoalsProvider value={{ goals: goalsMap, refetch: refetchGoals }}>
+      {/* Loading overlay — sits on top while data loads, then fades away revealing app beneath */}
+      {overlayVisible && (
+        <LoadingScreen
+          progress={loadingProgress}
+          skipEntry
+          onExit={handleLoadingExit}
+        />
+      )}
 
-      {/* Main content — floating card ON TOP, slides right to reveal sidebar */}
-      <ScreenStackWrapper open={sidebarOpen} onOpen={openSidebar} onClose={closeSidebar}>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex min-h-dvh flex-col bg-cream"
-        >
-          <main className="flex-1 overflow-y-auto pb-20">{children}</main>
-        </motion.div>
-      </ScreenStackWrapper>
+      {/* App content — mounts as soon as data is ready, stagger plays while overlay fades */}
+      {appMounted && (
+        <div className="relative min-h-dvh bg-[#1E1C19]">
+          {/* Sidebar — dark full-screen bg, BEHIND the card */}
+          <SettingsSidebar
+            open={sidebarOpen}
+            onClose={closeSidebar}
+            walletBalanceUsd={data.walletBalanceUsd}
+          />
 
-      {/* Chat panel — always mounted, visibility controlled */}
-      <ChatSheet visible={isOpen} />
+          {/* Main content — floating card ON TOP, slides right to reveal sidebar */}
+          <ScreenStackWrapper open={sidebarOpen} onOpen={openSidebar} onClose={closeSidebar}>
+            <div className="flex min-h-dvh flex-col bg-cream">
+              <main className="flex-1 overflow-y-auto pb-20">{children}</main>
+            </div>
+          </ScreenStackWrapper>
 
-      {/* Input bar — always visible except sidebar, z-60 above everything */}
-      {!sidebarOpen && <ChatInputBar />}
-    </div>
+          {/* Chat panel — always mounted, visibility controlled */}
+          <ChatSheet visible={isOpen} />
+
+          {/* Input bar — always visible except sidebar, z-60 above everything */}
+          {!sidebarOpen && <ChatInputBar />}
+        </div>
+      )}
+    </GoalsProvider>
   );
 }
 
@@ -142,9 +170,15 @@ function ChatInputBar() {
     startRecording, stopRecording, cancelRecording, clearError,
   } = useVoiceRecorder();
 
+  const IDLE_LABELS: Record<NonNullable<typeof activeSheet>["type"], string> = {
+    deposit: "Deposit",
+    withdraw: "Withdraw",
+    swap: "Confirm",
+    goal: "Save goal",
+  };
   const stepLabel = activeSheet
     ? activeSheet.step === "idle"
-      ? activeSheet.type === "deposit" ? "Deposit" : activeSheet.type === "swap" ? "Confirm" : "Withdraw"
+      ? IDLE_LABELS[activeSheet.type]
       : activeSheet.step === "processing"
         ? "Processing..."
         : activeSheet.step === "success"

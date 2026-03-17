@@ -10,6 +10,8 @@ interface PositionCardProps {
   prices: Record<string, number>;
   goal?: { name: string; targetUsd: number };
   onTap: (vault: VaultStatsItem) => void;
+  onRemoveGoal?: () => void;
+  onAddGoal?: () => void;
 }
 
 export function PositionCard({
@@ -18,6 +20,8 @@ export function PositionCard({
   prices,
   goal,
   onTap,
+  onRemoveGoal,
+  onAddGoal,
 }: PositionCardProps) {
   const name = VAULT_FRIENDLY_NAMES[vault.id] || vault.name;
   const price = getPrice(prices, vault.asset.symbol);
@@ -26,9 +30,12 @@ export function PositionCard({
   const accent = VAULT_ACCENTS[vault.id];
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onTap(vault)}
-      className="w-full overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTap(vault); }}
+      className="w-full cursor-pointer overflow-hidden rounded-xl border p-4 text-left transition-all duration-300 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
       style={{
         borderColor: accent?.border || "var(--color-border)",
         background: accent
@@ -53,6 +60,7 @@ export function PositionCard({
           {apy}
         </span>
       </div>
+
       {goal && (
         <>
           <div className="mt-3 h-1.5 rounded-full bg-border/50">
@@ -68,12 +76,34 @@ export function PositionCard({
             <span className="font-display text-[11px] italic text-ink-light">
               {goal.name}
             </span>
-            <span className="font-body text-[10px] text-ink-light/60">
-              {formatUsd(usdValue)} / {formatUsd(goal.targetUsd)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-body text-[10px] text-ink-light/60">
+                {formatUsd(usdValue)} / {formatUsd(goal.targetUsd)}
+              </span>
+              {onRemoveGoal && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemoveGoal(); }}
+                  className="p-0.5 text-ink-light/25 transition-colors duration-150 hover:text-ink-light/50"
+                  aria-label="Remove goal"
+                >
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}
-    </button>
+
+      {!goal && onAddGoal && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onAddGoal(); }}
+          className="mt-3 font-body text-[11px] text-ink-light/35 transition-colors duration-150 hover:text-ink-light/60"
+        >
+          + set a goal
+        </button>
+      )}
+    </div>
   );
 }

@@ -61,7 +61,6 @@ export function ChatSheet({ visible }: ChatSheetProps) {
     return new DefaultChatTransport({ api: "/api/chat", body: liveBody });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fix 7: No welcome message — start empty
   const { messages, sendMessage, addToolResult, status } = useChat({
     transport,
   });
@@ -157,6 +156,17 @@ export function ChatSheet({ visible }: ChatSheetProps) {
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pt-4 pb-20">
           <div className="space-y-4">
+            {/* Welcome message — shown when chat is empty */}
+            {messages.length === 0 && (
+              <div className="py-6">
+                <p className="font-display text-[1.4rem] leading-snug text-ink">
+                  Hey{name ? `, ${name}` : ""}. 👋
+                </p>
+                <p className="mt-3 font-body text-[1rem] leading-relaxed text-ink/60">
+                  I&rsquo;m your savings assistant. Ask me what to save in, how much to set aside, or anything about your money.
+                </p>
+              </div>
+            )}
             {messages.map((message) => {
               const hasText = message.parts.some(
                 (p) => p.type === "text" && p.text.trim(),

@@ -22,8 +22,19 @@ function activityDescription(item: ActivityItem): string {
     case "withdraw":
       return `Withdrew from ${vaultName}`;
     case "swap":
-      return `Swapped ${item.tokenSymbol}`;
+      return `Swapped to ${item.tokenSymbol}`;
   }
+}
+
+// Smart amount formatting — no 20-decimal soup
+function fmtAmt(raw: string): string {
+  const n = parseFloat(raw);
+  if (!n || isNaN(n)) return "0";
+  if (n >= 10000) return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (n >= 100) return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (n >= 1) return parseFloat(n.toPrecision(5)).toString();
+  if (n >= 0.001) return parseFloat(n.toPrecision(4)).toString();
+  return parseFloat(n.toPrecision(3)).toString();
 }
 
 const ICON_PATHS: Record<ActivityItem["type"], string> = {
@@ -50,63 +61,55 @@ export function ActivityList({ activities }: ActivityListProps) {
           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
           <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <p className="font-body text-sm text-ink-light">
-          Nothing here yet
-        </p>
-        <p className="mt-0.5 font-mono text-[10px] text-ink-light/60">
-          Your deposits and withdrawals will show up here
+        <p className="font-body text-sm text-ink-light">Nothing here yet</p>
+        <p className="mt-0.5 font-body text-[11px] text-ink-light/50">
+          Your deposits and withdrawals will appear here
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-0">
+    <div>
       {activities.map((item, i) => {
         const iconPath = ICON_PATHS[item.type];
-        const iconBg =
-          item.type === "deposit" ? "bg-sage/10" : "bg-ink/[0.04]";
-        const iconColor =
-          item.type === "deposit" ? "text-sage" : "text-ink-light";
+        const isDeposit = item.type === "deposit";
+        const iconBg = isDeposit ? "bg-sage/10" : "bg-ink/[0.04]";
+        const iconColor = isDeposit ? "text-sage" : "text-ink-light/50";
+        const amountColor = isDeposit ? "text-sage" : "text-ink-light";
 
         const inner = (
           <>
-            <div
-              className={`flex h-8 w-8 flex-none items-center justify-center rounded-full ${iconBg}`}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                className={iconColor}
-              >
-                <path
-                  d={iconPath}
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+            {/* Icon */}
+            <div className={`flex h-7 w-7 flex-none items-center justify-center rounded-full ${iconBg}`}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className={iconColor}>
+                <path d={iconPath} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
+
+            {/* Description + time */}
             <div className="min-w-0 flex-1">
-              <p className="truncate font-body text-sm text-ink">
+              <p className="truncate font-body text-[14px] leading-snug text-ink">
                 {activityDescription(item)}
               </p>
-              <p className="font-mono text-[10px] text-ink-light/60">
+              <p className="mt-0.5 font-body text-[11px] text-ink-light/40">
                 {formatRelativeTime(item.createdAt)}
               </p>
             </div>
-            <span className="flex-none font-mono text-xs text-ink-light">
-              {item.amount} {item.tokenSymbol}
-            </span>
+
+            {/* Amount */}
+            <div className="flex-none text-right">
+              <span className={`font-mono text-[12px] tabular-nums ${amountColor}`}>
+                {isDeposit ? "+" : "−"}{fmtAmt(item.amount)}
+              </span>
+              <p className="font-body text-[10px] text-ink-light/40">{item.tokenSymbol}</p>
+            </div>
           </>
         );
 
-        const rowClass = `flex items-center gap-3 py-3 transition-colors duration-200 ${
-          item.txHash ? "hover:bg-cream-dark/30 -mx-3 px-3 rounded-xl" : ""
-        }${i < activities.length - 1 ? " border-b border-border/30" : ""}`;
+        const rowClass = `flex items-center gap-3 py-3${
+          i < activities.length - 1 ? " border-b border-border/30" : ""
+        }${item.txHash ? " -mx-1 cursor-pointer rounded-xl px-1 transition-colors duration-150 hover:bg-ink/[0.02] active:bg-ink/[0.04]" : ""}`;
 
         return item.txHash ? (
           <a

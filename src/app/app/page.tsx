@@ -6,7 +6,7 @@ import type { VaultStatsItem } from "@yo-protocol/core";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { NARRATION_CACHE_KEY } from "@/lib/constants";
 import { useActivities } from "@/hooks/use-activities";
-import { useGoals } from "@/hooks/use-goals";
+import { useAppGoals } from "@/contexts/goals-context";
 import { useChatSheet } from "@/contexts/chat-context";
 import { OverviewScreen } from "@/components/dashboard/overview-screen";
 import { DepositSheet } from "@/components/dashboard/deposit-sheet";
@@ -15,7 +15,7 @@ import { WithdrawSheet } from "@/components/dashboard/withdraw-sheet";
 export default function DashboardPage() {
   const data = useDashboardData();
   const { activities, refetch: refetchActivities } = useActivities();
-  const { goals } = useGoals();
+  const { goals: goalsMap } = useAppGoals();
   const { registerDashboardData, openSidebar } = useChatSheet();
 
   useEffect(() => {
@@ -50,17 +50,6 @@ export default function DashboardPage() {
         createdAt: a.createdAt,
       })),
     [activities],
-  );
-
-  const goalsMap = useMemo(
-    () =>
-      Object.fromEntries(
-        goals.map((g) => [
-          g.vaultId,
-          { name: g.name, targetUsd: parseFloat(g.targetAmount) },
-        ]),
-      ),
-    [goals],
   );
 
   const withdrawPosition = withdrawVault
