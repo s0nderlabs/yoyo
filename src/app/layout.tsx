@@ -25,6 +25,8 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "yoyo — Onchain Savings Made Easy",
   description:
