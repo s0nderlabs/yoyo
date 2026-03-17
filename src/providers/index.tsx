@@ -22,9 +22,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+  if (!privyAppId) return <>{children}</>;
+
   return (
     <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
+      appId={privyAppId}
       config={privyConfig}
     >
       <SmartWalletsProvider>

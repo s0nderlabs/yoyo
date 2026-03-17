@@ -8,7 +8,7 @@ import type { DashboardData } from "@/hooks/use-dashboard-data";
 import { useChatSheet } from "@/contexts/chat-context";
 import { useAppGoals } from "@/contexts/goals-context";
 import { formatUsd, formatApy } from "@/lib/format";
-import { VAULT_LOGOS, VAULT_FRIENDLY_NAMES, TOKEN_LOGOS, NARRATION_CACHE_KEY } from "@/lib/constants";
+import { VAULT_LOGOS, VAULT_FRIENDLY_NAMES, TOKEN_LOGOS } from "@/lib/constants";
 import { OdometerNumber } from "@/components/ui/odometer-number";
 import { PositionCard } from "./position-card";
 import { GoalCard } from "./goal-card";
@@ -227,12 +227,7 @@ export function OverviewScreen({
     await refetchGoals();
   }, [refetchGoals]);
   const [activityMode, setActivityMode] = useState<"prose" | "list">("prose");
-  const [narration, setNarration] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      return localStorage.getItem(NARRATION_CACHE_KEY);
-    } catch { return null; }
-  });
+  const [narration, setNarration] = useState<string | null>(null);
   const [narrationLoading, setNarrationLoading] = useState(false);
 
   // Pull-to-refresh
@@ -275,12 +270,20 @@ export function OverviewScreen({
     ? (data.cache?.positionVaultIds ?? [])
     : [...new Set(data.positions.map((p) => p.vault.id))];
 
+  const walletAddress = user?.smartWallet?.address ?? user?.wallet?.address;
+  const narrationCacheKey = walletAddress ? `yoyo:narration-cache:${walletAddress}` : null;
+
   // Fetch AI narration when activities exist
   const activityCount = activities?.length ?? 0;
   useEffect(() => {
     if (activityCount === 0) return;
+    if (!narrationCacheKey) return;
+
+    const cached = localStorage.getItem(narrationCacheKey);
+    if (cached) setNarration(cached);
+
     const controller = new AbortController();
-    setNarrationLoading(true);
+    if (!cached) setNarrationLoading(true);
     fetch("/api/activity/narrate", { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error("Failed");
@@ -289,12 +292,12 @@ export function OverviewScreen({
       .then((d) => {
         const text = d.narration ?? null;
         setNarration(text);
-        if (text) try { localStorage.setItem(NARRATION_CACHE_KEY, text); } catch {}
+        if (text) try { localStorage.setItem(narrationCacheKey, text); } catch {}
       })
       .catch((e) => { if (e.name !== "AbortError") setNarration(null); })
       .finally(() => setNarrationLoading(false));
     return () => controller.abort();
-  }, [activityCount]);
+  }, [activityCount, narrationCacheKey]);
 
   const name =
     user?.google?.name?.split(" ")[0] ||

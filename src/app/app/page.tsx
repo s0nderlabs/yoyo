@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { VaultStatsItem } from "@yo-protocol/core";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { NARRATION_CACHE_KEY } from "@/lib/constants";
 import { useActivities } from "@/hooks/use-activities";
 import { useAppGoals } from "@/contexts/goals-context";
 import { useChatSheet } from "@/contexts/chat-context";
@@ -27,7 +26,6 @@ export default function DashboardPage() {
 
   const handleTransactionSuccess = (clearSheet: () => void) => {
     clearSheet();
-    try { localStorage.removeItem(NARRATION_CACHE_KEY); } catch {}
     // Delay refetches to let on-chain state settle
     setTimeout(() => refetchActivities(), 1500);
     setTimeout(() => {

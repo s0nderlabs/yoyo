@@ -2,15 +2,17 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+
+const PENDING_KEY = "yoyo:pending-redirect";
 
 export function useHandleLogin() {
   const router = useRouter();
   const { ready, authenticated, login } = usePrivy();
-  const justLoggedIn = useRef(false);
 
   useEffect(() => {
-    if (ready && authenticated && justLoggedIn.current) {
+    if (ready && authenticated && localStorage.getItem(PENDING_KEY)) {
+      localStorage.removeItem(PENDING_KEY);
       router.push("/app");
     }
   }, [ready, authenticated, router]);
@@ -20,7 +22,7 @@ export function useHandleLogin() {
       router.push("/app");
       return;
     }
-    justLoggedIn.current = true;
+    localStorage.setItem(PENDING_KEY, "1");
     login();
   };
 
