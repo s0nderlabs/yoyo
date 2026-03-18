@@ -30,6 +30,10 @@ export const metadata: Metadata = {
   description:
     "Earn up to 12% on your savings. No fees. Withdraw anytime. Powered by YO Protocol.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "yoyo — Onchain Savings Made Easy",
     description: "Earn up to 12% on your savings. No fees. Withdraw anytime.",

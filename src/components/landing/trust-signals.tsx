@@ -8,7 +8,13 @@ export function TrustSignals() {
   const { vaults } = useVaults();
   const tvl = useMemo(() => {
     if (!vaults?.length) return "$91M+";
-    const total = vaults.reduce((sum, v) => sum + parseFloat(String(v.tvl?.raw || 0)), 0);
+    // tvl.formatted is a USD string, tvl.raw is in token units (not USD)
+    const total = vaults.reduce((sum, v) => {
+      const val = parseFloat(v.tvl?.formatted || "0");
+      return isNaN(val) ? sum : sum + val;
+    }, 0);
+    // Sanity check: if parsing failed or value is absurd, fall back
+    if (total <= 0 || total > 1e12) return "$91M+";
     if (total >= 1e9) return `$${(total / 1e9).toFixed(1)}B+`;
     if (total >= 1e6) return `$${Math.round(total / 1e6)}M+`;
     return `$${Math.round(total / 1e3)}K+`;
