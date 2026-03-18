@@ -1,64 +1,210 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import {
+  motion,
+  AnimatePresence,
+  useInView,
+  useMotionValue,
+  useTransform,
+  animate,
+} from "framer-motion";
 
-const props = [
-  {
-    label: "Yield",
-    value: "Up to 12%",
-    description: "Your money earns while you sleep, automatically optimized across the best opportunities in DeFi.",
-  },
-  {
-    label: "Fees",
-    value: "Zero",
-    description: "No management fees. No performance fees. No deposit or withdrawal fees. What you earn is yours.",
-  },
-  {
-    label: "Access",
-    value: "Anytime",
-    description: "Withdraw whenever you need it. Most withdrawals are instant. No lock-ups, no penalties.",
-  },
+/* ── Data ─────────────────────────────────────────────────── */
+
+const STATS = [
+  { label: "Yield", type: "yield" as const, micro: "annual return, compounded automatically" },
+  { label: "Fees", type: "fees" as const, micro: "no management, performance, or withdrawal fees" },
+  { label: "Access", type: "access" as const, micro: "withdraw in seconds, no lock-up periods" },
 ];
 
-export function ValueProps() {
-  return (
-    <section className="border-t border-border px-6 py-24 sm:py-32">
-      <div className="mx-auto max-w-3xl">
-        <motion.span
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: "-100px" }}
-          className="label-mono"
-        >
-          Why yoyo
-        </motion.span>
+const ease = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
-        <div className="mt-12 grid gap-16 sm:gap-20">
-          {props.map((prop, i) => (
-            <motion.div
-              key={prop.label}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{
-                duration: 0.7,
-                delay: i * 0.1,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              className="grid gap-3 sm:grid-cols-[200px_1fr]"
-            >
-              <div>
-                <span className="label-mono text-sage">{prop.label}</span>
-                <p className="mt-1 font-display text-4xl text-ink sm:text-5xl">
-                  {prop.value}
-                </p>
-              </div>
-              <p className="font-body text-lg leading-relaxed text-ink-light sm:pt-8">
-                {prop.description}
-              </p>
-            </motion.div>
-          ))}
-        </div>
+/* ── Yield: count 4 → 12 ─────────────────────────────────── */
+
+function YieldNumber({ triggered }: { triggered: boolean }) {
+  const count = useMotionValue(4);
+  const display = useTransform(count, (v) => `Up to ${Math.round(v)}%`);
+
+  useEffect(() => {
+    if (!triggered) return;
+    const ctrl = animate(count, 12, { duration: 1.5, ease: "easeOut" });
+    return () => ctrl.stop();
+  }, [triggered, count]);
+
+  return (
+    <motion.p className="font-display tabular-nums text-[clamp(3.5rem,12vw,4.5rem)] leading-none tracking-tight text-ink">
+      {display}
+    </motion.p>
+  );
+}
+
+/* ── Fees: countdown 100 → 0 → "Zero" ────────────────────── */
+
+function FeesNumber({ triggered }: { triggered: boolean }) {
+  const count = useMotionValue(100);
+  const [done, setDone] = useState(false);
+  const display = useTransform(count, (v) => String(Math.round(v)));
+
+  useEffect(() => {
+    if (!triggered) return;
+    const ctrl = animate(count, 0, {
+      duration: 1.8,
+      ease: "easeOut",
+      onComplete: () => setTimeout(() => setDone(true), 120),
+    });
+    return () => ctrl.stop();
+  }, [triggered, count]);
+
+  return (
+    <AnimatePresence mode="wait">
+      {!done ? (
+        <motion.p
+          key="count"
+          exit={{ opacity: 0, filter: "blur(4px)", transition: { duration: 0.12 } }}
+          className="font-display tabular-nums text-[clamp(3.5rem,12vw,4.5rem)] leading-none tracking-tight text-ink"
+        >
+          {display}
+        </motion.p>
+      ) : (
+        <motion.p
+          key="word"
+          initial={{ opacity: 0, filter: "blur(6px)" }}
+          animate={{ opacity: 1, filter: "blur(0px)" }}
+          transition={{ duration: 0.35, ease }}
+          className="font-display text-[clamp(3.5rem,12vw,4.5rem)] leading-none tracking-tight text-ink"
+        >
+          Zero
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ── Access: clock 00:00 → 24:00 → "24/7" ────────────────── */
+
+function AccessNumber({ triggered }: { triggered: boolean }) {
+  const count = useMotionValue(0);
+  const [done, setDone] = useState(false);
+  const display = useTransform(count, (v) => {
+    const h = Math.round(v);
+    return `${h.toString().padStart(2, "0")}:00`;
+  });
+
+  useEffect(() => {
+    if (!triggered) return;
+    const ctrl = animate(count, 24, {
+      duration: 1.4,
+      ease: "easeOut",
+      onComplete: () => setTimeout(() => setDone(true), 180),
+    });
+    return () => ctrl.stop();
+  }, [triggered, count]);
+
+  return (
+    <AnimatePresence mode="wait">
+      {!done ? (
+        <motion.p
+          key="clock"
+          exit={{ opacity: 0, filter: "blur(4px)", transition: { duration: 0.12 } }}
+          className="font-display tabular-nums text-[clamp(3.5rem,12vw,4.5rem)] leading-none tracking-tight text-ink"
+        >
+          {display}
+        </motion.p>
+      ) : (
+        <motion.p
+          key="final"
+          initial={{ opacity: 0, filter: "blur(6px)" }}
+          animate={{ opacity: 1, filter: "blur(0px)" }}
+          transition={{ duration: 0.35, ease }}
+          className="font-display tabular-nums text-[clamp(3.5rem,12vw,4.5rem)] leading-none tracking-tight text-ink"
+        >
+          24/7
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ── Single stat row ─────────────────────────────────────── */
+
+function StatRow({
+  stat,
+  delay,
+  isParentInView,
+}: {
+  stat: (typeof STATS)[number];
+  delay: number;
+  isParentInView: boolean;
+}) {
+  const [triggered, setTriggered] = useState(false);
+
+  useEffect(() => {
+    if (!isParentInView || triggered) return;
+    const t = setTimeout(() => setTriggered(true), delay);
+    return () => clearTimeout(t);
+  }, [isParentInView, delay, triggered]);
+
+  const show = triggered;
+
+  return (
+    <div>
+      {/* Label */}
+      <motion.p
+        className="font-display italic text-lg text-sage/70"
+        initial={{ opacity: 0 }}
+        animate={show ? { opacity: 1 } : {}}
+        transition={{ delay: 0.12, duration: 0.35 }}
+      >
+        {stat.label}
+      </motion.p>
+
+      {/* Number */}
+      <motion.div
+        initial={{ opacity: 0, y: 18, filter: "blur(8px)" }}
+        animate={show ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+        transition={{ delay: 0.18, duration: 0.75, ease }}
+        className="mt-1"
+      >
+        {stat.type === "yield" && <YieldNumber triggered={triggered} />}
+        {stat.type === "fees" && <FeesNumber triggered={triggered} />}
+        {stat.type === "access" && <AccessNumber triggered={triggered} />}
+      </motion.div>
+
+      {/* Micro context */}
+      <motion.p
+        className="mt-3 font-body text-sm leading-snug text-ink-light/50 text-pretty"
+        initial={{ opacity: 0 }}
+        animate={show ? { opacity: 1 } : {}}
+        transition={{ delay: 0.9, duration: 0.5 }}
+      >
+        {stat.micro}
+      </motion.p>
+    </div>
+  );
+}
+
+/* ── Section ──────────────────────────────────────────────── */
+
+export function ValueProps() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const isInView = useInView(sectionRef, { once: true, amount: 0.35 });
+
+  return (
+    <section ref={sectionRef} className="flex min-h-dvh flex-col justify-center px-6 py-16">
+      <motion.p
+        initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
+        animate={isInView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+        transition={{ duration: 0.6, ease }}
+        className="font-display italic text-2xl text-sage/70 text-balance"
+      >
+        Why yoyo
+      </motion.p>
+
+      <div className="mt-10 flex flex-col gap-10">
+        {STATS.map((stat, i) => (
+          <StatRow key={stat.label} stat={stat} delay={i * 280} isParentInView={isInView} />
+        ))}
       </div>
     </section>
   );
