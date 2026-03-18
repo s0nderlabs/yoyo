@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   motion,
   AnimatePresence,
@@ -9,6 +9,7 @@ import {
   useTransform,
   animate,
 } from "framer-motion";
+import { useVaults } from "@yo-protocol/react";
 
 /* ── Data ─────────────────────────────────────────────────── */
 
@@ -22,15 +23,15 @@ const ease = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 /* ── Yield: count 4 → 12 ─────────────────────────────────── */
 
-function YieldNumber({ triggered }: { triggered: boolean }) {
-  const count = useMotionValue(4);
+function YieldNumber({ triggered, target = 12 }: { triggered: boolean; target?: number }) {
+  const count = useMotionValue(Math.max(target - 8, 2));
   const display = useTransform(count, (v) => `Up to ${Math.round(v)}%`);
 
   useEffect(() => {
     if (!triggered) return;
-    const ctrl = animate(count, 12, { duration: 1.5, ease: "easeOut" });
+    const ctrl = animate(count, target, { duration: 1.5, ease: "easeOut" });
     return () => ctrl.stop();
-  }, [triggered, count]);
+  }, [triggered, count, target]);
 
   return (
     <motion.p className="font-display tabular-nums text-[clamp(3.5rem,12vw,4.5rem)] leading-none tracking-tight text-ink">
@@ -132,10 +133,12 @@ function StatRow({
   stat,
   delay,
   isParentInView,
+  maxApy,
 }: {
   stat: (typeof STATS)[number];
   delay: number;
   isParentInView: boolean;
+  maxApy?: number;
 }) {
   const [triggered, setTriggered] = useState(false);
 
@@ -166,7 +169,7 @@ function StatRow({
         transition={{ delay: 0.18, duration: 0.75, ease }}
         className="mt-1"
       >
-        {stat.type === "yield" && <YieldNumber triggered={triggered} />}
+        {stat.type === "yield" && <YieldNumber triggered={triggered} target={maxApy} />}
         {stat.type === "fees" && <FeesNumber triggered={triggered} />}
         {stat.type === "access" && <AccessNumber triggered={triggered} />}
       </motion.div>
@@ -189,6 +192,12 @@ function StatRow({
 export function ValueProps() {
   const sectionRef = useRef<HTMLElement>(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.35 });
+  const { vaults } = useVaults();
+  const maxApy = useMemo(() => {
+    if (!vaults?.length) return 12;
+    const apys = vaults.map((v) => parseFloat(v.yield?.["7d"] ?? "0")).filter((n) => !isNaN(n));
+    return apys.length ? Math.round(Math.max(...apys)) : 12;
+  }, [vaults]);
 
   return (
     <section ref={sectionRef} className="flex min-h-dvh flex-col justify-center px-6 py-16">
@@ -203,7 +212,7 @@ export function ValueProps() {
 
       <div className="mt-10 flex flex-col gap-10">
         {STATS.map((stat, i) => (
-          <StatRow key={stat.label} stat={stat} delay={i * 280} isParentInView={isInView} />
+          <StatRow key={stat.label} stat={stat} delay={i * 280} isParentInView={isInView} maxApy={maxApy} />
         ))}
       </div>
     </section>

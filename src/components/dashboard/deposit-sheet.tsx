@@ -14,12 +14,13 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useVaultDeposit } from "@/hooks/use-vault-tx";
 import { formatUsd, formatApy, formatShares, getPrice } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
-import { VAULT_FRIENDLY_NAMES } from "@/lib/constants";
+import { VAULT_FRIENDLY_NAMES, TOKEN_ADDRESSES } from "@/lib/constants";
 import { useChatSheet } from "@/contexts/chat-context";
 
 interface DepositSheetProps {
   vault: VaultStatsItem;
   prices: Record<string, number>;
+  walletAssets?: { symbol: string; balance: string }[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -27,6 +28,7 @@ interface DepositSheetProps {
 export function DepositSheet({
   vault,
   prices,
+  walletAssets,
   onClose,
   onSuccess,
 }: DepositSheetProps) {
@@ -36,12 +38,35 @@ export function DepositSheet({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
 
-  const tokenAddress = vault.asset.address as Address;
+  // Token selector: default to vault's native token, fall back to USDC if user has none
+  const nativeSymbol = vault.asset.symbol;
+  const availableTokens = useMemo(() => {
+    if (!walletAssets?.length) return [nativeSymbol];
+    const symbols = walletAssets.map((a) => a.symbol).filter((s) => TOKEN_ADDRESSES[s] || s === nativeSymbol);
+    // Put native token first if present
+    if (symbols.includes(nativeSymbol)) return [nativeSymbol, ...symbols.filter((s) => s !== nativeSymbol)];
+    return symbols.length ? symbols : [nativeSymbol];
+  }, [walletAssets, nativeSymbol]);
+
+  const [selectedToken, setSelectedToken] = useState(() => {
+    // Default to native if user has it, otherwise first available
+    if (walletAssets?.some((a) => a.symbol === nativeSymbol && parseFloat(a.balance) > 0)) return nativeSymbol;
+    const firstWithBalance = walletAssets?.find((a) => parseFloat(a.balance) > 0 && TOKEN_ADDRESSES[a.symbol]);
+    return firstWithBalance?.symbol ?? nativeSymbol;
+  });
+
+  const tokenAddress = (selectedToken === nativeSymbol
+    ? vault.asset.address
+    : TOKEN_ADDRESSES[selectedToken] ?? vault.asset.address) as Address;
+  const tokenDecimals = selectedToken === "USDC" || selectedToken === "USDT" ? 6
+    : selectedToken === "EURC" ? 6
+    : selectedToken === nativeSymbol ? vault.asset.decimals
+    : 18;
   const vaultAddress = vault.contracts.vaultAddress as Address;
 
   const { balance } = useTokenBalance(tokenAddress, walletAddress);
   const tokenBalance = balance
-    ? Number(balance.balance) / 10 ** vault.asset.decimals
+    ? Number(balance.balance) / 10 ** tokenDecimals
     : 0;
 
   const amount = isEditing ? Number(editValue) || 0 : (sliderValue / 100) * tokenBalance;
@@ -49,11 +74,11 @@ export function DepositSheet({
   const parsedAmount = useMemo(() => {
     if (amount <= 0) return 0n;
     try {
-      return parseUnits(amount.toFixed(vault.asset.decimals), vault.asset.decimals);
+      return parseUnits(amount.toFixed(tokenDecimals), tokenDecimals);
     } catch {
       return 0n;
     }
-  }, [amount, vault.asset.decimals]);
+  }, [amount, tokenDecimals]);
 
   const { shares: previewShares } = usePreviewDeposit(
     vaultAddress,
@@ -76,7 +101,7 @@ export function DepositSheet({
     onError: () => {},
   });
 
-  const price = getPrice(prices, vault.asset.symbol) || 0;
+  const price = getPrice(prices, selectedToken) || 0;
   const usdValue = amount * price;
   const exceedsBalance = amount > tokenBalance;
   const canDeposit =
@@ -107,8 +132,11 @@ export function DepositSheet({
       onCancel: () => onCloseRef.current(),
       step,
     });
-    return () => setActiveSheet((prev) => prev?.type === "deposit" ? null : prev);
   }, [step, setActiveSheet]);
+
+  useEffect(() => {
+    return () => setActiveSheet(null);
+  }, [setActiveSheet]);
 
   const handleAmountTap = useCallback(() => {
     setIsEditing(true);
@@ -220,6 +248,23 @@ export function DepositSheet({
           </div>
         ) : (
           <>
+            {/* Token selector — show when multiple tokens available */}
+            {availableTokens.length > 1 && (
+              <div className="mt-4 flex gap-2">
+                {availableTokens.map((sym) => (
+                  <button
+                    key={sym}
+                    onClick={() => { setSelectedToken(sym); setSliderValue(0); setIsEditing(false); }}
+                    className={`rounded-full px-3 py-1 font-mono text-[11px] transition-colors duration-200 ${
+                      selectedToken === sym ? "bg-ink text-cream" : "bg-cream-dark text-ink-light"
+                    }`}
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Amount display — tap to type */}
             <div className="mt-8 text-center">
               {isEditing ? (
@@ -253,7 +298,7 @@ export function DepositSheet({
                 </button>
               )}
               <p className="mt-1 font-mono text-xs text-ink-light">
-                {vault.asset.symbol}
+                {selectedToken}
                 {usdValue > 0 && ` · ${formatUsd(usdValue)}`}
               </p>
               {exceedsBalance && (
@@ -284,7 +329,7 @@ export function DepositSheet({
                   {tokenBalance.toLocaleString("en-US", {
                     maximumFractionDigits: 2,
                   })}{" "}
-                  {vault.asset.symbol}
+                  {selectedToken}
                 </span>
               </div>
             </div>
@@ -301,6 +346,8 @@ export function DepositSheet({
             {/* Confirm button moved to morphing chat bar */}
           </>
         )}
+        {/* iOS Safari bottom gap extension */}
+        <div className="absolute -bottom-48 inset-x-0 h-48 bg-cream" />
       </motion.div>
     </>,
     document.body,

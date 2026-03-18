@@ -154,7 +154,7 @@ export function ChatSheet({ visible }: ChatSheetProps) {
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pt-4 pb-20">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pt-4 pb-[calc(5rem+max(env(safe-area-inset-bottom),0px))]">
           <div className="space-y-4">
             {/* Welcome message — shown when chat is empty */}
             {messages.length === 0 && (

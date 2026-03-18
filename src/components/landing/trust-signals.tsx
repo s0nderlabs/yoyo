@@ -1,8 +1,19 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { useVaults } from "@yo-protocol/react";
 
 export function TrustSignals() {
+  const { vaults } = useVaults();
+  const tvl = useMemo(() => {
+    if (!vaults?.length) return "$91M+";
+    const total = vaults.reduce((sum, v) => sum + parseFloat(String(v.tvl?.raw || 0)), 0);
+    if (total >= 1e9) return `$${(total / 1e9).toFixed(1)}B+`;
+    if (total >= 1e6) return `$${Math.round(total / 1e6)}M+`;
+    return `$${Math.round(total / 1e3)}K+`;
+  }, [vaults]);
+
   return (
     <section className="relative flex min-h-dvh flex-col justify-center px-6">
       {/* Ambient gradient */}
@@ -16,7 +27,6 @@ export function TrustSignals() {
       />
 
       <div className="relative mx-auto max-w-3xl">
-        {/* Eyebrow — large italic serif, sigil-style */}
         <motion.p
           initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
           whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -27,7 +37,6 @@ export function TrustSignals() {
           Built on trust
         </motion.p>
 
-        {/* Main statement */}
         <motion.p
           initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
           whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -37,10 +46,9 @@ export function TrustSignals() {
         >
           Powered by{" "}
           <span className="text-sage">YO Protocol</span>
-          {" "}— the yield optimizer securing $91M+ across
+          {" "}— the yield optimizer securing {tvl} across
           Ethereum, Base, and Arbitrum.
         </motion.p>
-
       </div>
     </section>
   );

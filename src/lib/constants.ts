@@ -82,6 +82,15 @@ export const TOKEN_DISPLAY_NAMES: Record<string, string> = {
 
 export const NARRATION_CACHE_KEY = "yoyo:narration-cache";
 
+/** Known token addresses on Base */
+export const TOKEN_ADDRESSES: Record<string, string> = {
+  USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  WETH: "0x4200000000000000000000000000000000000006",
+  cbBTC: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+  EURC: "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
+  USDT: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+};
+
 export const SYMBOL_TO_COINGECKO: Record<string, string> = {
   usdc: "usd-coin",
   weth: "ethereum",

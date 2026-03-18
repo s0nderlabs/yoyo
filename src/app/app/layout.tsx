@@ -292,7 +292,7 @@ function ChatInputBar() {
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder={voiceError ? "Mic unavailable — type instead" : "Ask anything..."}
+                  placeholder={voiceError ? "Mic unavailable — type instead" : "What are you saving for?"}
                   className="flex-1 bg-transparent font-body text-sm text-ink outline-none placeholder:text-ink-light/40"
                 />
                 <AnimatePresence mode="wait" initial={false}>
@@ -312,7 +312,7 @@ function ChatInputBar() {
             {mode === "idle" && (
               <motion.div key="idle" {...morphProps} className={`${PILL_INNER} gap-3`}>
                 <button onClick={() => open()} className="flex-1 text-left font-body text-sm text-ink-light/50">
-                  anything...
+                  What are you saving for?
                 </button>
                 <button onClick={handleMicTap} className="rounded-full p-1">
                   <MicIcon className="text-ink-light/30" />

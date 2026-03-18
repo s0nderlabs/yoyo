@@ -23,6 +23,9 @@ interface OverviewScreenProps {
   onVaultTap: (vault: VaultStatsItem) => void;
   onPositionTap: (vault: VaultStatsItem) => void;
   onRefresh?: () => Promise<void>;
+  onAddFunds?: () => void;
+  onSend?: () => void;
+  onReceive?: () => void;
 }
 
 /* ── Daily hash for rotating content ─────────────────────── */
@@ -213,6 +216,9 @@ export function OverviewScreen({
   onVaultTap,
   onPositionTap,
   onRefresh,
+  onAddFunds,
+  onSend,
+  onReceive,
 }: OverviewScreenProps) {
   const { user } = usePrivy();
   const { open } = useChatSheet();
@@ -493,13 +499,37 @@ export function OverviewScreen({
                       <div className="relative flex aspect-[1.6/1] flex-col p-6">
                         <AnimatePresence mode="wait" initial={false}>
                           {flippedCard !== 0 ? (
-                            <motion.div key="balance-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-col">
-                              <p className="font-display italic text-[13px] text-ink/60">Wallet balance</p>
-                              <div className="mt-auto">
-                                <OdometerNumber value={displayBalance ?? 0} format={formatUsd} className="font-display text-[2.8rem] leading-none tracking-tight text-ink sm:text-[3.2rem]" />
-                                <p className="mt-1.5 font-body text-[10px] text-ink/60 transition-[opacity] duration-300" style={{ opacity: data.walletAssets.length > 0 ? 1 : 0 }}>
-                                  {data.walletAssets.length > 0 ? `${data.walletAssets.length} ${data.walletAssets.length === 1 ? "asset" : "assets"} · tap to see breakdown` : "\u00a0"}
-                                </p>
+                            <motion.div key="balance-front" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="flex flex-1 flex-row">
+                              {/* Left — balance info */}
+                              <div className="flex flex-1 flex-col">
+                                <p className="font-display italic text-[13px] text-ink/60">Wallet balance</p>
+                                <div className="mt-auto">
+                                  <OdometerNumber value={displayBalance ?? 0} format={formatUsd} className="font-display text-[2.8rem] leading-none tracking-tight text-ink sm:text-[3.2rem]" />
+                                  <p className="mt-1.5 font-body text-[10px] text-ink/60 transition-[opacity] duration-300" style={{ opacity: data.walletAssets.length > 0 ? 1 : 0 }}>
+                                    {data.walletAssets.length > 0 ? `${data.walletAssets.length} ${data.walletAssets.length === 1 ? "asset" : "assets"} · tap to see breakdown` : "\u00a0"}
+                                  </p>
+                                </div>
+                              </div>
+                              {/* Right — action pills */}
+                              <div className="flex flex-col items-center justify-center gap-3">
+                                {[
+                                  { label: "Add", icon: "M8 3v10M3 8h10", onClick: onAddFunds },
+                                  { label: "Send", icon: "M8 12V4M5 7l3-3 3 3", onClick: onSend },
+                                  { label: "Receive", icon: "M8 4v8M5 9l3 3 3-3", onClick: onReceive },
+                                ].map((action) => (
+                                  <button
+                                    key={action.label}
+                                    onClick={(e) => { e.stopPropagation(); action.onClick?.(); }}
+                                    className="group flex flex-col items-center gap-0.5 transition-transform duration-200 active:scale-[0.88]"
+                                  >
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink/[0.06] transition-[background-color,transform] duration-200 group-hover:bg-ink/[0.12] group-hover:scale-110">
+                                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="transition-transform duration-200 group-hover:scale-110">
+                                        <path d={action.icon} stroke="var(--color-ink)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    </span>
+                                    <span className="font-body text-[9px] text-ink/40 transition-colors duration-200 group-hover:text-ink/70">{action.label}</span>
+                                  </button>
+                                ))}
                               </div>
                             </motion.div>
                           ) : (
@@ -593,6 +623,7 @@ export function OverviewScreen({
             </motion.div>
           )}
           </AnimatePresence>
+
         </motion.div>
 
         {/* ── Editorial prose ────────────────────────────── */}

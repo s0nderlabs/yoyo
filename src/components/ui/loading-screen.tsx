@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 interface LoadingScreenProps {
   progress: number; // 0–100
   onExit?: () => void;
-  skipEntry?: boolean; // skip blur-in entry for seamless auth→data transition
+  skipEntry?: boolean;
 }
 
 export function LoadingScreen({ progress, onExit, skipEntry = false }: LoadingScreenProps) {
@@ -17,47 +17,57 @@ export function LoadingScreen({ progress, onExit, skipEntry = false }: LoadingSc
   useEffect(() => {
     if (progress >= 100 && !exiting) {
       const t1 = setTimeout(() => setExiting(true), 200);
-      const t2 = setTimeout(() => onExitRef.current?.(), 200 + 400);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
+      const t2 = setTimeout(() => onExitRef.current?.(), 200 + 450);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
     }
-  }, [progress, exiting]); // onExit intentionally excluded — using ref to avoid timer resets
+  }, [progress, exiting]);
 
-  const wordmarkEntry = skipEntry
+  const entryInitial = skipEntry
     ? { opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }
     : { opacity: 0, y: 16, filter: "blur(8px)" };
+
+  const exitTarget = { opacity: 1, y: -8, scale: 1.08, filter: "blur(10px)" };
+  const visibleTarget = { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" };
 
   return (
     <motion.div
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#FFFEF2]"
       initial={{ opacity: 1 }}
       animate={{ opacity: exiting ? 0 : 1 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
     >
-      {/* Wordmark */}
-      <motion.span
-        className="font-display text-[4.5rem] tracking-tight text-ink"
-        initial={wordmarkEntry}
-        animate={
-          exiting
-            ? { opacity: 1, y: 0, scale: 1.05, filter: "blur(5px)" }
-            : { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }
-        }
-        transition={
-          exiting
-            ? { duration: 0.35, ease: [0.16, 1, 0.3, 1] }
-            : { type: "spring", stiffness: 80, damping: 20 }
-        }
-      >
-        yoyo
-      </motion.span>
+      {/* Wordmark — split into staggered halves */}
+      <div className="flex">
+        <motion.span
+          className="font-display text-[4.5rem] tracking-tight text-ink"
+          initial={entryInitial}
+          animate={exiting ? exitTarget : visibleTarget}
+          transition={
+            exiting
+              ? { duration: 0.45, ease: [0.16, 1, 0.3, 1] }
+              : { type: "spring", stiffness: 80, damping: 20 }
+          }
+        >
+          yo
+        </motion.span>
+        <motion.span
+          className="font-display text-[4.5rem] tracking-tight text-ink"
+          initial={entryInitial}
+          animate={exiting ? exitTarget : visibleTarget}
+          transition={
+            exiting
+              ? { duration: 0.45, ease: [0.16, 1, 0.3, 1] }
+              : { type: "spring", stiffness: 80, damping: 20, delay: 0.12 }
+          }
+        >
+          yo
+        </motion.span>
+      </div>
 
-      {/* Progress line — pinned to bottom */}
-      <div className="fixed bottom-0 left-0 right-0 h-[1px]">
+      {/* Progress bar — upgraded */}
+      <div className="fixed bottom-0 left-0 right-0 h-[3px]">
         <div
-          className="h-full bg-sage/50 transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+          className="h-full rounded-full bg-sage/60 transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{ width: `${progress}%` }}
         />
       </div>

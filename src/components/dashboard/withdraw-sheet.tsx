@@ -103,8 +103,11 @@ export function WithdrawSheet({
       onCancel: () => onCloseRef.current(),
       step,
     });
-    return () => setActiveSheet((prev) => prev?.type === "withdraw" ? null : prev);
   }, [step, setActiveSheet]);
+
+  useEffect(() => {
+    return () => setActiveSheet(null);
+  }, [setActiveSheet]);
 
   const name = VAULT_FRIENDLY_NAMES[vault.id] || vault.name;
 
@@ -243,6 +246,8 @@ export function WithdrawSheet({
             {/* Confirm button moved to morphing chat bar */}
           </>
         )}
+        {/* iOS Safari bottom gap extension */}
+        <div className="absolute -bottom-48 inset-x-0 h-48 bg-cream" />
       </motion.div>
     </>,
     document.body,
