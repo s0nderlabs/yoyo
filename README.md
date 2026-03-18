@@ -4,7 +4,7 @@
 
 yoyo is a mobile savings app that lets anyone earn yield on their money without understanding crypto. Powered by [YO Protocol](https://docs.yo.xyz), it replaces the complexity of DeFi with a single AI chat interface. Just tell yoyo what you're saving for, and it handles everything.
 
-**[Live App](https://yoyo.s0nderlabs.xyz)** · **[Demo Video](https://youtube.com/shorts/lt3f9EXybj8)**
+**[Live App](https://yoyo.s0nderlabs.xyz)** · **[Demo Video](https://www.youtube.com/watch?v=lt3f9EXybj8&t=3s)**
 
 ---
 
@@ -218,15 +218,6 @@ PrivyProvider
 ## Hackathon
 
 Built for [Hack with YO: Designing Smart DeFi Savings](https://dorahacks.io/hackathon/yo/detail) on DoraHacks.
-
-**Judging criteria:**
-
-| Criteria | Weight |
-|----------|--------|
-| UX Simplicity | 30% |
-| Creativity & Growth Potential | 30% |
-| Quality of Integration | 20% |
-| Risk & Trust | 20% |
 
 ## License
 
